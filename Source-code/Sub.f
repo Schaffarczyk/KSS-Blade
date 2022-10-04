@@ -194,10 +194,12 @@ c
                cdss (j) = cds  (kk,j)
             enddo	 
 c
+c           aps 2022 July 26: fixed bug :   np(indpro) -> np(kk)
+c
             call SPLINT
-     +      (aoasp,clsp,clss,Np(indpro),aoab,clint(k+1),dummy)
+     +      (aoasp,clsp,clss,Np(kk),aoab,clint(k+1),dummy)
             call SPLINT
-     +      (aoasp,cdsp,cdss,Np(indpro),aoab,cdint(k+1),dummy)
+     +      (aoasp,cdsp,cdss,Np(kk),aoab,cdint(k+1),dummy)
 	 enddo
 c
 c*************** BEM ******************************************************
@@ -216,7 +218,7 @@ c-------------------------------------------------------------------------
 c        begin debug
 	 deb = .False.
          if (deb)then
-	    if(th.gt.0.46.and.th.lt..47)then
+	    if(th.gt.0.55.and.th.lt..61)then
                write(*,125)'x','th','aoab','clint(1)',
      +         'clint(2)','n1','n2','np1','np2'
                write(*,126) x,th,aoab,clint(1),clint(2),
@@ -309,10 +311,10 @@ c
 c
 c        negative ap indicates instability from the root vortex 
 c
-	 if (apnew.lt.0.0)then
-            anew = eps
-            apnew= eps
-         endif
+c	 if (apnew.lt.0.)then
+c            anew = eps
+c            apnew= .1
+c         endif
 c
 c--------------------------------------------------------------
 c        DEBUG
@@ -546,6 +548,10 @@ c
               endif
            end do
 c
+	  write(*,*)'****** indpro ',indpro
+c
+c          if (indpro.lt.1)indpro=2
+c
 321        dth       = prothick(indpro)-prothick(indpro-1)
     	   x         = (prothick(indpro)-thloc)/dth
 c
@@ -594,8 +600,10 @@ c
 c
 c          find name of profile of next smallest thicknet
 c
-c
            thickdessec = thicksp(rr)
+           minthick    = prothick(nopr)
+           if(thickdessec.lt.minthick)thickdessec=minthick
+c
            prdname = ""
 	   do k =1,nopr
               if(thickdessec.ge.prothick(k))then
@@ -667,7 +675,7 @@ C
 c     read one line of header !!
 c
       READ(IOIN,*)
-c----------------------------------------------------------
+c--------------------------------------------------------------------------------------
 c     read in nd lines from ProThick.in
 c
       IOut = 13
