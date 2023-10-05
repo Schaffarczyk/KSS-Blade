@@ -3,7 +3,8 @@ c	module mem instead of "evil" common
 c
 	module mem
 c	
-      integer status,ioout,maxiter,nsec,ndes
+      integer status,ioout, maxiter,nsec,ndes
+      integer indpro
 c
       logical DesMode,ImpChord,ImpTwist,ImpThick
 c
@@ -13,7 +14,7 @@ c
       integer npitch
       real aoab
       real vtip, vwinda, vwinde, vwind
-      real RPM, om, tsr 
+      real RPM, om, tsr,tsrloc
       integer nwind
       integer DesSchema
  

@@ -30,7 +30,8 @@ c                 fixed-point iteration
 c                 tested for: SWT (r-tip = 5.1m), NREL 5MW, DTU 10MW, NREL 15 MW,
 c                             r-tip= 110, 124 and 133 m)
 c
-c
+c         Nov/Dec implementation of binary search
+c------------------------------------------------------------------------------------------
 	program KSS
 c
 	use mem
@@ -53,7 +54,6 @@ c
         allocate(twists(1:nsp)   ,stat=status)
         allocate(chspsm(1:nsp)   ,stat=status)
         allocate(twistspsm(1:nsp) ,stat=status)
-c
 c
 	npol=300
         allocate(aoasp(1:npol)  ,stat=status)
@@ -83,7 +83,7 @@ c----------------------------------------------------------------------
 c
       pi      = 4.*atan(1.)
       eps     = 1.e-5
-      maxiter = 999
+      maxiter = 100
 c
       cpmax = -1.
       ctmax = -1.
@@ -91,6 +91,10 @@ c
 c     number of BEM-iterations performed
 c
       ibem = 0	
+c
+c        Assure valid WT operation: only for 0 < a < 1
+c
+	 if (anew.ge.1.0)anew = 0.9999
 c
 c----------------------------------------------------------------------
 c     read in machine and job data
