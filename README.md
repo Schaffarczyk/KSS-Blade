@@ -8,3 +8,6 @@ V3: 2022 Oct  4
 two sample cases have been added:
 a) NREL 5MW 
 b) IEAwind/NREl 15 MW
+
+V4: 2025 Oct 08
+update for Optimus Syria Project
