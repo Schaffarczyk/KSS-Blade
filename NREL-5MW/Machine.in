@@ -1,0 +1,19 @@
+DesMode    .F.
+BladeNo    3.0
+dens       1.225
+Rhub       0.3
+Rtip       63.0
+windrage   11.0 11.0 1
+rpm        12.1
+Pitchr     0.0 0.0 1
+Nsec        70
+tipshape   P
+Tiplen      3.0
+twmax      20.
+chmax       5.5
+ImpChord   .F.
+ImpTwist   .F. 7
+ImpThick   .F.
+TwistB     .F.
+DesSchema  2
+
