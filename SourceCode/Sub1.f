@@ -8,7 +8,7 @@ c
 c      2023  July: try propeller mode
 c
 c----------------------------------------------------------------------
-      subroutine BEM(cP,cT)
+      subroutine BEM(cP,cT,errb)
 c-----------------------------------------------------------------------
 c
       use mem
@@ -30,6 +30,8 @@ c
       write(*,*)
       write(*,*)'************************'
       write(*,*)'routine BEM ************'
+c
+      errb = 0.	
 c
 c     critical a value to for cT(a) correction (Glauert/Hansen)
 c
@@ -67,12 +69,12 @@ c
 c
       write(*,101)'r ',' a ','ap ','F','w','chord','twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
-     +            'iter','err','th','Prof','IterS'
+     +            'iter','err','th','Prof','It'
 c
       write(ioout,101)'r ',' a ','ap ','F','w','chord',
      +            'twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
-     +            'iter','err','th','Prof','IterS'
+     +            'iter','err','th','Prof','It'
 c----------------------------------------------------------------------------------
 c     initialize some data
 c
@@ -164,6 +166,8 @@ c
 c       start with initial values for a and aprime (1/3 and 0.)
 c
          phi  = atan(vwind*(1.-aold)/(r*om*(1.+apold)))
+c         phi  = atan2(vwind*(1.-aold),(r*om*(1.+apold)))
+c         phi  = atan2((r*om*(1.+apold)),vwind*(1.-aold))
          if (phi.lt.0.)phi = 0.0001
          w2   =     (vwind*(1.-aold))**2 + (r*om*(1.+apold))**2
          phid = 180.*phi/pi
@@ -305,6 +309,8 @@ c
         BB    = B*chord*ct/(8.*TL*pi*r*sin(phi)*cos(phi))
         apnew = BB/(1.-BB)
 c
+        if(apnew.lt.-.5)apnew = -.5
+c
 cDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 c---------------------------------------------------------------------------
 c       use BINARY SEARCH if izero ne 1 and fixed point else
@@ -317,7 +323,7 @@ c
             iiters = 3
         end if
 c
-c       here's seem to be a bug (2023 Feb 06
+c       here seems to be a bug (2023 Feb 06)
 c
  	iiters = 1
 c
@@ -353,7 +359,7 @@ c         cthnrel = cthnrel +(50./9.-4.*TL)*anew*anew
 c
 c        Assure valid WT operation:  0 < a < 1
 c
-	 if (anew.ge.1.0)anew = 0.9999
+	 if (anew.ge..99)anew = 0.99
 c
 c----------------------------------------------------------------------------------
          case (2)
@@ -374,6 +380,9 @@ c
             AAp   = (AA2-AA1)/dphi
             anew  = aold - AA/AAp
 	    anew  = anew/(1.+anew)
+c
+             if(anew.ge..99)anew = 0.99
+c
 c            write(777,*)'r iter anew',r,iter, anew
 c
           case (3)
@@ -397,6 +406,8 @@ c-------------------------------------------------------------------------------
 c
 c       END BEM loop  
 cBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+c
+        if(err.gt.errb)errb=err
 c
         dT  =  0.5*dens*b*chord*w2*cn*dr
         dFt =  0.5*dens*b*chord*w2*ct*dr
@@ -471,13 +482,16 @@ c
       write(*,103)'pitch = ',glopitch
       write(*,103)'cP = ',cp
       write(*,103)'cT = ',ct
+      write(*,103)'cP/cT = ',cp/ct
       write(*,103)'cQ = ',cp/tsr
+      write(*,103)'errb  = ',errb
 c
       write(ioout,103)'cP = ',cp
       write(ioout,103)'cT = ',ct
       write(ioout,103)'cQ = ',ct/tsr
       write(ioout,103)'TSR = ',TSR
       write(ioout,103)'pitch = ',glopitch
+      write(ioout,103)'errb  = ',errb
 c
       Close(UNIT=ioout)
       Close(UNIT=io2)
@@ -486,7 +500,7 @@ c
       Close(UNIT=io5)
 c
 100   format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2)
-101   format(17a8                         ,a8,a8,a4,a6,a6)
+101   format(14a8,             4a9,       a8,    a9,    a5,  a3)
 102   format(a10,f8.3,a12)
 103   format(a20,f12.4,a10)
 104   format(2(a15,f12.4))
