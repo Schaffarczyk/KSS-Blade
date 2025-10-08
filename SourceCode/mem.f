@@ -21,7 +21,7 @@ c
       real twmax, chmax
       real pi, eps
 
-      CHARACTER*100 nin, nameprout,namedesin(100)
+      CHARACTER*100 nin, nameprout,namedesin(200)
       Character*20  nout,noutd,nread
       character*10  timea,timee
       character*8   date
@@ -40,12 +40,12 @@ c     profile data
 c     1st index: max number of profiles
 c     2nd index: max number of aoas
 c
-      REAL aoain(10,300),clin(10,300), cdin(10,300)
-      real cls  (10,300),cds (10,300)
+      REAL aoain(20,300),clin(20,300), cdin(20,300)
+      real cls  (20,300),cds (20,300)
 c
-      real prothick(100)
-      real optcl(100),optaoa(100), maxcl(100),maxaoa(100)
-      real zeroaoa(100),zeroslope(100)
+      real prothick(200)
+      real optcl(200),optaoa(200), maxcl(200),maxaoa(200)
+      real zeroaoa(200),zeroslope(200)
 c
 c     nopr: number of profiles, nd = lines in BlaDes
 c
@@ -54,17 +54,17 @@ c
 c
 c     np: number of data in profile file, iprno: profile number 
 c
-      integer np(0:100),iprno(100)
+      integer np(0:100),iprno(200)
 c
 c     profile thickness
 c
-      real dthr(100),dthth(100),dthsp(100)
+      real dthr(200),dthth(200),dthsp(200)
       real minthick
       integer irth
 c
 c     elastic pitch due to twist bend
 c
-      real eltw(0:15,25),rstw(0:15)
+      real eltw(0:50,30),rstw(0:50)
       logical twistb
 c
 	end module mem
