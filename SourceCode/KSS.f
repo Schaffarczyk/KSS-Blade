@@ -83,7 +83,7 @@ c----------------------------------------------------------------------
 c
       pi      = 4.*atan(1.)
       eps     = 1.e-5
-      maxiter = 100
+      maxiter = 200
 c
       cpmax = -1.
       ctmax = -1.
@@ -191,31 +191,74 @@ c
 	write(*,*)
 	write(*,*)'***** enter twistb routine *****'
 c
-c       specified section at wich torsional deformation is given
+c       sectional radius (m) at which torsional deformation is given
 c
-c          Type 1: 12 sections,
+c          Type 1: 12 sections
 c          Type 2: 13
 c          Type 3: 11
+c          Type 4: 40
+c-----------------------------------------------------------
+c          Type 4 IEA 22MW RWT: 40 sections
 c
-	   nseltw =11
+	   nseltw =40
+c
+	rstw( 1 )  =   0.000
+	rstw( 2 )  =   2.831
+	rstw( 3 )  =   7.080
+	rstw( 4 )  =  10.835
+ 	rstw( 5 )  =  14.588
+ 	rstw( 6 )  =  18.340
+ 	rstw( 7 )  =  22.090
+ 	rstw( 8 )  =  25.838
+ 	rstw( 9 )  =  29.586
+	rstw(10 )  =  33.333
+ 	rstw(11 )  =  37.080
+ 	rstw(12 )  =  40.827
+ 	rstw(13 )  =  44.573
+ 	rstw(14 )  =  48.320
+ 	rstw(15 )  =  52.066
+ 	rstw(16 )  =  55.813
+ 	rstw(17 )  =  59.560
+ 	rstw(18 )  =  63.308
+ 	rstw(19 )  =  67.055
+ 	rstw(20 )  =  70.803
+ 	rstw(21 )  =  74.786
+ 	rstw(22 )  =  78.769
+ 	rstw(23 )  =  82.753
+ 	rstw(24 )  =  86.738
+ 	rstw(25 )  =  90.724
+ 	rstw(26 )  =  94.712
+ 	rstw(27 )  =  98.702
+ 	rstw(28 )  = 102.694
+ 	rstw(29 )  = 106.689
+ 	rstw(30 )  = 110.687
+ 	rstw(31 )  = 114.690
+ 	rstw(32 )  = 118.697
+	rstw(33 )  = 122.710
+ 	rstw(34 )  = 126.729
+ 	rstw(35 )  = 130.756
+ 	rstw(36 )  = 134.793
+ 	rstw(37 )  = 139.110
+ 	rstw(38 )  = 140.553
+ 	rstw(39 )  = 141.276
+ 	rstw(40 )  = 142.000
 c
 c          Type 3 GW110 : 11 sections
 c
-	   rstw(0) =   0.
-	   rstw(1) =  10.5
-	   rstw(2) =  20.0
-	   rstw(3) =  30.0
-	   rstw(4) =  40.
-	   rstw(5) =  50.
-	   rstw(6) =  60.
-	   rstw(7) =  70.
-	   rstw(8) =  80.
-	   rstw(9) =  90.
-	   rstw(10)=  100.
-	   rstw(11)= 110.5
+c	   rstw(0) =   0.
+c	   rstw(1) =  10.5
+c	   rstw(2) =  20.0
+c	   rstw(3) =  30.0
+c	   rstw(4) =  40.
+c	   rstw(5) =  50.
+c	   rstw(6) =  60.
+c	   rstw(7) =  70.
+c	   rstw(8) =  80.
+c	   rstw(9) =  90.
+c	   rstw(10)=  100.
+c	   rstw(11)= 110.5
 c
 c          hub radius added later
-c
 c
 c          Type 2 Sinoma 124: 13 sections
 c
@@ -259,11 +302,14 @@ c
 c          2022 April 26:  k = int(winspeed)
 c                          icutout = 23
 c
-	   icutout = 23
+	   icutout = 25
 	   do k =3,icutout
               eltw(0,k) = 0.0
            end do
 	   write(*,*)'eltw r = 0'
+c
+c         i # sections    = nseltw = 40
+c         j # wind-speeds = icutout= 23 
 c
 	   do i =1,nseltw
                read(intemp,*) (eltw(i,j),j=3,icutout)
@@ -326,7 +372,7 @@ c	     write(*,*)'KKS gp ',glopitch
                write(*,*)'TSR ',TSR
 c
 cBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-               call bem(cP,cT)
+               call bem(cP,cT,errb)
                ibem = ibem +1
 cBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 c
@@ -337,13 +383,16 @@ c
 	       if(ct.lt.0.) ct = 0.
 	       if(ct.gt.2.) ct = 2.
 c
+c               if(errb.gt.10.)cP = 0.
+c
 c             search only "around" maximum
 c             avoid turbulent wake state etc
-	      tsrmin =  4.
-              tsrmax = 14.
+c
+	      tsrmin =  1.
+              tsrmax = 15.
 c
                if (tsr.gt.tsrmin.and.tsr.lt.tsrmax)then
-	          if(cp.gt.cpmax.and.cT.gt.0)then
+	          if(cp.gt.cpmax.and.cT.gt.0.and.cp.lt..55)then
                      cpmax      = cp
                      tsrmaxcp   = tsr
                      pitchmaxcp = glopitch
@@ -411,7 +460,7 @@ c
 c
 c---------------------------------------------------------------------
 c
-c       smooth chord and/or twist with Bezier polynoms 
+c       smooth chord and/or twist using Bezier polynoms 
 c
 c----------------------------------------------------------------------
 c
@@ -422,7 +471,7 @@ c
 c       initial BEM
 c     
         write(*,*)'Initial BEM'
-	call bem(cP,cT)
+	call bem(cP,cT,errb)
         ibem = ibem + 1
         write(iout5,201)ibem,'. iter cP/cT = ',cP,cT
 c
@@ -435,7 +484,7 @@ c
              do I =1,noimptw
 	       write(*,*)'twist loop no: ',i
                call improveTWIST
-	       call bem(cP,cT)
+	       call bem(cP,cT,errb)
                ibem = ibem + 1
                write(iout5,201)ibem,'. iter cP/cT = ',cP,cT
              end do
@@ -452,7 +501,7 @@ c
               write(*,*)'IMPROVE thickness'
               filename   ='./ThickDis.new'
                call ThickPrep(filename)
-	       call bem(cP,cT)
+	       call bem(cP,cT,errb)
                ibem = ibem + 1
                write(iout5,201)ibem,'. iter cP/cT = ',cP,cT
  	   end if
@@ -460,7 +509,6 @@ c
 c-----------------------------------------------------------------------
 c      perform additional twist improvement loops because of new thickness
 c-----------------------------------------------------------------------
-c
 c
 c------------------------------------------------------------------------
 c       finished
