@@ -1,1 +1,12 @@
+This github resository is intended for use to design wind turbine (WT) blades.
+A short description is provided in report-128.pdf (see foulder ManDoc) and may be updated from time to time.
 
+We added input files for:
+NREL bBaseline 5MW blade and
+DTU/IEAwind-15MW blade
+
+Bak's report from 2013 about WT blade desing is also included.
+
+Kiel, Germany, 2025 Oct 08
+
+contact: Alois.Schaffarczyk@FH-Kiel.de
