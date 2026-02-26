@@ -253,11 +253,10 @@ c
               endif
            end do
 c
-	  write(*,*)'****** indpro ',indpro
+c	  write(*,*)'****** indpro ',indpro
+321          if (indpro.lt.2)indpro=2
 c
-c          if (indpro.lt.1)indpro=2
-c
-321        dth       = prothick(indpro)-prothick(indpro-1)
+           dth       = prothick(indpro)-prothick(indpro-1)
     	   x         = (prothick(indpro)-thloc)/dth
 c
 c          angle of attack
@@ -290,10 +289,29 @@ c
 c
 c	   write(*,*)'cls ',optcl(indpro-1),cldes,optcl(indpro)
 c
-c	   chord
+c	   chord 03 12 2025 improve chord in inner part
+c
+c          (1) from Betz no restrictions
 c
            chloc   = chDes(rloc,cldes) 
-           chsp(i) = min(chmax,chloc)  
+c
+c          guess avr cL-des for estimation of location of max chord
+c
+           cldess  = cldesavr
+           rchmax  = (9.*B*cldess*tsr*chmax)/(16.*pi)
+           dch     = chmax  - chroot
+           drr     = rchmax - rroot
+           stch    = dch/drr
+           abb     = chmax - stch *rchmax
+           chtrans = abb + stch*rloc
+c
+c          (2) transition from root to max chard
+           if(rloc.gt.rroot.and.rloc.lt.rchmax)chloc=chtrans
+c
+c          (3) root section
+           if(rloc.lt.rroot)chloc=chroot
+c
+           chsp(i)=min(chmax,chloc)
 c
 	   rout = rsecsp(i)
            rr   = rout/rtip
@@ -471,7 +489,8 @@ c------------------------------------------------------------------------------
 c     analysis and interpolaton of aerodynamic data 
 c------------------------------------------------------------------------------
 c
-      Iout2 = 15
+      cldesavr = 0.
+c
       Nout2 = 'ProProp.out'
       OPEN(UNIT=IOut2,FILE=Nout2,FORM='FORMATTED',STATUS='unknown')
 c
@@ -558,12 +577,16 @@ c---------------------------------------------------------------
 c       output
 c-----------------------------------------------------------------------
 c
+        ilast = i
+c
         optprrad = rtip*rthpr(i)
         write(*    ,123)nin,optprrad,gzmax,optaoa(i),optcl(i),
      +  maxaoa(i),maxcl(i),zeroaoa(i),zeroslope(i),np(i)
         write(iout2,123)nin,optprrad,gzmax,optaoa(i),optcl(i),
      +  maxaoa(i),maxcl(i),zeroaoa(i),zeroslope(i),np(i)
-123	format(a8,8f12.4,i12)
+c 
+        cldesavr = cldesavr + optcl(i)
+c        write(*,*)'cldesavr ',cldesavr
 c
 C        SPLINE INTERPOLATION 
 C
@@ -600,6 +623,18 @@ c
 c
       enddo
 c     do i=1,nopr
+c
+c     18 11 2025 write last profile to ProProp.out
+c
+      optprrad = rtip
+      write(iout2,123)nin,optprrad,gzmax,optaoa(ilast),optcl(ilast),
+     +   maxaoa(ilast),maxcl(ilast),zeroaoa(ilast),zeroslope(ilast),
+     +   np(ilast)
+c
+123   format(a8,8f12.4,i12)
+c
+      cldesavr = cldesavr/float(nopr)
+      write(*,'(a15,F6.2)')'cldesavr = ',cldesavr
 c
       write(*,*)'minthick = ',minthick
 c
