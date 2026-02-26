@@ -25,12 +25,18 @@ c     24 Feb 2022 V1 incl. report
 c
 c     06 Jul 2022 V2 incl. report
 c                 features have been added, fore example
-c                 BEM interation shifts to Newton-Rapfson after 100 not succesful 
+c                 BEM interation shifts to Newton-Raphson after 100 not succesful 
 c                 fixed-point iteration
 c                 tested for: SWT (r-tip = 5.1m), NREL 5MW, DTU 10MW, NREL 15 MW,
 c                             r-tip= 110, 124 and 133 m)
 c
 c         Nov/Dec implementation of binary search
+c
+c      20 Nov 2025 V4 optimus syria and minor changes
+c	report at overleaf
+c      02 Dec 2025
+c       root chord
+c
 c------------------------------------------------------------------------------------------
 	program KSS
 c
@@ -70,7 +76,7 @@ c
 c
 	write(*,*)
 	write(*,*)'================================================ '
-        Write(*,*)'KSS  START                                       '
+        write(*,*)'KSS  START ***** V5 *****                        '
 	write(*,'(a6,a4,a1,a2,a1,a2,a6,a10)')
      +  'date ',date(1:4),' ',date(5:6),' ',date(7:8),' time ',timea
 
@@ -131,6 +137,12 @@ c
          read(intemp,*)inpstring, TwistB
 c
          read(intemp,*)inpstring, DesSchema
+
+c
+c----------------  root chord -----------------------------------
+c
+         read(intemp,*)inpstring, chroot
+c
 c
       Close(UNIT=intemp)
 c
@@ -156,6 +168,7 @@ c
 c 
       write(*,*)  'ImpTwist    ',ImpTwist
       write(*,*)  'ImpThick    ',ImpThick
+      write(*,*)  'chroot      ',chroot
 c
       write(*,*)
 c
@@ -165,6 +178,7 @@ c      read first pre-definded thickness distribution
 c-----------------------------------------------------------------------
 c
       filename   = './ThickDis.in'
+c      write(*,*)'data from ThickDis.in '
       call ThickPrep(filename)
 c
 c----------------------------------------------------------------------
@@ -519,8 +533,8 @@ c
 	write(*,*)'================================================ '
 	write(*,'(a10,a4,a1,a2,2(a1,a2))')'date ',date(1:4),' ',
      +           date(5:6),' ',date(7:8)
-        write(*,'(2a10)')'Anfang: ', timea
-        write(*,'(2a10)')'Ende:   ', timee
+        write(*,'(2a10)')'Start: ', timea
+        write(*,'(2a10)')'End:   ', timee
         Write(*,*)'KSS END                                          '
 	write(*,*)'================================================ '
 	write(*,*)
@@ -537,12 +551,12 @@ c
 110     format(a120,f12.6,a30,2f10.3)
 c
 200     format(a18,2f10.4)
-201            format(i2,a16,2f10.4)
+201     format(i2,a16,2f10.4)
 c
-999      format(a6,a8,a6)
-998      format(34f12.4)
-997      format(f6.3,f8.3,f6.1)
-996      format(4a12,a6)    
+999     format(a6,a8,a6)
+998     format(34f12.4)
+997     format(f6.3,f8.3,f6.1)
+996     format(4a12,a6)    
 c
       end
 c
