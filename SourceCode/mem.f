@@ -35,6 +35,7 @@ c
       REAL, allocatable :: clsp(:)  ,cdsp(:)
       REAL, allocatable :: chs(:),twists(:),clss(:),cdss(:)
       REAL, allocatable :: abem(:),apbem(:)
+      Real, allocatable :: oopdef(:)
 c
 c     profile data
 c     1st index: max number of profiles

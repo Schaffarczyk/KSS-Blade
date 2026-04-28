@@ -149,11 +149,11 @@ c     2021 Nov 25:   iprno must be consitent with names
 c     -> BlaDes and Prothick have to be "synchronous"
 c
 c
-      READ(IOIN,*,END=21,ERR=21)rsecsp(nd),twistsp(nd),chsp(nd),
-c23456
-     +                           namedesin(nd)
-      Write(*,'(3f14.4,2x,a14)')rsecsp(nd),twistsp(nd),chsp(nd),
-     +                           namedesin(nd)
+c1234567890
+      READ(IOIN,*,END=21,ERR=21) rsecsp(nd), twistsp(nd),
+     + chsp(nd), namedesin(nd), oopdef(nd)
+      Write(*,'(3f14.4,2x,a14,2x,f10.3)') rsecsp(nd),
+     + twistsp(nd), chsp(nd), namedesin(nd), oopdef(nd)
       goto 20
 C
  21   close(ioin)

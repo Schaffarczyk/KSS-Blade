@@ -15,6 +15,7 @@ c
 c
       real clint(2),cdint(2),dct(0:1)
       real zero(100),aoabs(100)
+      real slope, theta, dFx, dFz
 c
       real thick1, thick2, kg
 c
@@ -69,12 +70,12 @@ c
 c
       write(*,101)'r ',' a ','ap ','F','w','chord','twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
-     +            'iter','err','th','Prof','It'
+     +            'iter','err','th','Prof','It','dFx','dFz'
 c
       write(ioout,101)'r ',' a ','ap ','F','w','chord',
      +            'twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
-     +            'iter','err','th','Prof','It'
+     +            'iter','err','th','Prof','It','dFx','dFz'
 c----------------------------------------------------------------------------------
 c     initialize some data
 c
@@ -164,8 +165,8 @@ c
          end if   
 c
 c       start with initial values for a and aprime (1/3 and 0.)
-c
-         phi  = atan(vwind*(1.-aold)/(r*om*(1.+apold)))
+c (Line 169 - updated by Bhima on 28.04.2026)
+        phi  = atan2(vwind*(1.-aold), (r*om*(1.+apold)))
 c         phi  = atan2(vwind*(1.-aold),(r*om*(1.+apold)))
 c         phi  = atan2((r*om*(1.+apold)),vwind*(1.-aold))
          if (phi.lt.0.)phi = 0.0001
@@ -427,14 +428,25 @@ c
         apbem(i)= apnew
 c
         gam = .5*clo*sqrt(w2)*chord
+
+c     --- Calculate Slope and Resolve Forces ----(Start Code - updated by Bhima on 28.04.2026)
+      if (r .le. 2.8667) then
+         theta = 0.0
+      else
+         theta = 0.09955
+      endif
+
+      dFx = dTa * cos(theta)
+      dFz = dTa * sin(theta)
+c     ------------------------------------------(End Code - updated by Bhima on 28.04.2026)
 c
         write(*,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
      +              phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
-     +               iter,err,th,nameprout,iters
+     +               iter,err,th,nameprout,iters,dFx,dFz
 c
         write(ioout,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
      +              phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
-     +              iter,err,th,nameprout,iters
+     +              iter,err,th,nameprout,iters,dFx,dFz
 c
 c-------------------------------------------------------------------------------
 c
@@ -499,8 +511,8 @@ c
       Close(UNIT=io4)
       Close(UNIT=io5)
 c
-100   format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2)
-101   format(14a8,             4a9,       a8,    a9,    a5,  a3)
+100   format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2, 2f9.1)
+101   format(14a8,             4a9,       a8,    a9,    a5,  a3, 2a9)
 102   format(a10,f8.3,a12)
 103   format(a20,f12.4,a10)
 104   format(2(a15,f12.4))
@@ -575,7 +587,8 @@ c
 c
         aa   = a*(1.-a)/tsrloc
         ap   = sqrt(aa+0.25) - 0.5
-        phi  = atan(vwind*(1.-a)/(r*om*(1.+ap)))
+c (Line 590 - updated by Bhima on 28.04.2026)
+        phi  = atan2(vwind*(1.-a), (r*om*(1.+ap)))
         w2   =     (vwind*(1.-a))**2 + (r*om*(1.+ap))**2
         phid = 180.*phi/pi
         aoas = phid-twist

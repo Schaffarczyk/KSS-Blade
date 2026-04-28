@@ -59,6 +59,7 @@ c
         allocate(chs(1:nsp)      ,stat=status)
         allocate(twists(1:nsp)   ,stat=status)
         allocate(chspsm(1:nsp)   ,stat=status)
+        allocate(oopdef(1:nsp)   ,stat=status)
         allocate(twistspsm(1:nsp) ,stat=status)
 c
 	npol=300
