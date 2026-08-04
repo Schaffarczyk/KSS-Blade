@@ -16,4 +16,7 @@ ImpTwist   .F. 7
 ImpThick   .F.
 TwistB     .F.
 DesSchema  2
+chroot     3.5
+Radial     .T.
+RadMode    2
 
