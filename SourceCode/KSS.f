@@ -59,6 +59,8 @@ c
         allocate(chs(1:nsp)      ,stat=status)
         allocate(twists(1:nsp)   ,stat=status)
         allocate(chspsm(1:nsp)   ,stat=status)
+        allocate(oopdefsp(1:nsp) ,stat=status)
+        allocate(oopdefS(1:nsp)  ,stat=status)
         allocate(twistspsm(1:nsp) ,stat=status)
 c
 	npol=300
@@ -69,8 +71,14 @@ c
         allocate(clss(1:npol)   ,stat=status) 
         allocate(cdss(1:npol)   ,stat=status)
 
-        allocate(abem(1:npol)   ,stat=status) 
-        allocate(apbem(1:npol)  ,stat=status)	
+        allocate(abem(1:npol)   ,stat=status)
+        allocate(apbem(1:npol)  ,stat=status)
+c
+c       V3: per-section storage for the vortex cylinder model
+c
+        allocate(gamsec(1:nsp)  ,stat=status)
+        allocate(kapsec(1:nsp)  ,stat=status)
+        allocate(urvc(1:nsp)    ,stat=status)
 c
 	call date_and_time(date,timea,zone,values)
 c
@@ -99,8 +107,9 @@ c
       ibem = 0	
 c
 c        Assure valid WT operation: only for 0 < a < 1
-c
-	 if (anew.ge.1.0)anew = 0.9999
+c        (2026 07: removed check of "anew" here - it was undefined
+c         before the first call of BEM; the check is done in
+c         Calc_Induction_Convergence anyway)
 c
 c----------------------------------------------------------------------
 c     read in machine and job data
@@ -143,8 +152,45 @@ c----------------  root chord -----------------------------------
 c
          read(intemp,*)inpstring, chroot
 c
+c----------------  radial induction flag ------------------------------
+c
+c        Radial = .T. : include radial velocity component (simplest
+c                       algorithm of Li et al., WES 7, 75-104, 2022:
+c                       Madsen correction Eqs. (6)+(7) and extra
+c                       tangential force from Eq. (5))
+c        Radial = .F. : classical planar BEM
+c
+c        if the line is missing in an old Machine.in the flag
+c        defaults to .F.
+c
+         Radial = .FALSE.
+         read(intemp,*,iostat=ios)inpstring, Radial
+         if(ios.ne.0) Radial = .FALSE.
+c
+c----------------  radial induction model (V3) ------------------------
+c
+c        RadMode = 1 : Madsen correction (Eqs. 6+7)          -> V2
+c        RadMode = 2 : vortex cylinder model (Section 3)     -> V3
+c
+c        only active if Radial = .T. ;
+c        if the line is missing RadMode defaults to 1
+c
+         RadMode = 1
+         read(intemp,*,iostat=ios)inpstring, RadMode
+         if(ios.ne.0) RadMode = 1
+         if(RadMode.lt.1.or.RadMode.gt.2) RadMode = 1
 c
       Close(UNIT=intemp)
+c
+c     the radial induction needs the blade description (oop
+c     deflection spline) from BlaDes.in - available in
+c     ANALYSIS mode only
+c
+      if (DesMode.and.Radial) then
+         write(*,*)'WARNING: Radial = .T. not available in'
+         write(*,*)'         DESIGN mode  ->  Radial = .F.'
+         Radial = .FALSE.
+      endif
 c
 c     derive some more data
 c
@@ -169,6 +215,8 @@ c
       write(*,*)  'ImpTwist    ',ImpTwist
       write(*,*)  'ImpThick    ',ImpThick
       write(*,*)  'chroot      ',chroot
+      write(*,*)  'Radial      ',Radial
+      write(*,105)'RadMode   = ',RadMode
 c
       write(*,*)
 c
