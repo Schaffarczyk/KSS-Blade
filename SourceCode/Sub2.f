@@ -149,11 +149,11 @@ c     2021 Nov 25:   iprno must be consitent with names
 c     -> BlaDes and Prothick have to be "synchronous"
 c
 c
-      READ(IOIN,*,END=21,ERR=21)rsecsp(nd),twistsp(nd),chsp(nd),
-c23456
-     +                           namedesin(nd)
-      Write(*,'(3f14.4,2x,a14)')rsecsp(nd),twistsp(nd),chsp(nd),
-     +                           namedesin(nd)
+c1234567890
+      READ(IOIN,*,END=21,ERR=21) rsecsp(nd), twistsp(nd),
+     + chsp(nd), namedesin(nd), oopdefsp(nd)
+      Write(*,'(3f14.4,2x,a14,2x,f10.3)') rsecsp(nd),
+     + twistsp(nd), chsp(nd), namedesin(nd), oopdefsp(nd)
       goto 20
 C
  21   close(ioin)
@@ -184,6 +184,13 @@ c
       AB2 =  (chsp(Nd)- chsp(Nd-1))/(rsecsp(Nd)-rsecsp(Nd-1))
       CALL SPLINE(rsecsp,chsp,Nd,AB1,AB2,chS)
       write(*,*)'spline for chord done'
+c
+c     oopdef (updated by APS & Bhima on 26.05.2026)
+c
+      AB1 =  (oopdefsp( 2)-oopdefsp(1  ))/(rsecsp(2)-rsecsp(1))
+      AB2 =  (oopdefsp(Nd)-oopdefsp(Nd-1))/(rsecsp(Nd)-rsecsp(Nd-1))
+      CALL SPLINE(rsecsp,oopdefsp,Nd,AB1,AB2,oopdefS)
+      write(*,*)'spline for oopdefS done'
 c
 c     twist
 c
@@ -492,6 +499,10 @@ c
       cldesavr = 0.
 c
       Nout2 = 'ProProp.out'
+c
+c     2026 07: IOut2 was undefined before the OPEN - set unit number
+c
+      IOut2 = 14
       OPEN(UNIT=IOut2,FILE=Nout2,FORM='FORMATTED',STATUS='unknown')
 c
       write(*,*)'profile parameters:'
@@ -559,6 +570,10 @@ c---------------------------------------------------------------
 c        search for aoa at which cL = 0. 
 c--------------------------------------------------------------
 c
+c        2026 07: initialize indzero (was undefined if no negative
+c        cL exists in the range, e.g. for cylinders)
+c
+         indzero = 1
 	 do j = 1,np(i)
             if(aoain(i,j).gt.-20.and.aoain(i,j).lt.20.)then
 	       if (clin(i,j).lt.0.)then
@@ -907,12 +922,19 @@ c--------------------------------------
 	real function fnoverk(n,k)
 c-------------------------------------
 c
-	integer n,k
+	integer n,k,klocal
 c
-	if(2*k.gt.n)then k=n-k
+c       2026 07: "if(...)then k=n-k" was parsed as an assignment
+c       to a variable named "thenk" (fixed-form blank removal) -
+c       the symmetry shortcut never happened. Corrected with a
+c       local copy (k is a dummy argument - the caller passes its
+c       loop variable and must not be modified here!)
+c
+	klocal = k
+	if(2*klocal.gt.n) klocal = n-klocal
         fnoverk = 1.
 c
-	do i=1,k
+	do i=1,klocal
            t = Float(n+1-i)/Float(i)
            fnoverk = fnoverk*t
 	end do

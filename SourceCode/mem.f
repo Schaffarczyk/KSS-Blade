@@ -8,6 +8,29 @@ c
 c
       logical DesMode,ImpChord,ImpTwist,ImpThick
 c
+c     flag to switch inclusion of the radial velocity component
+c     (Madsen correction, Li et al. WES 7, 75-104, 2022, Eqs. 5-7)
+c     on (.T.) or off (.F.); read from Machine.in
+c
+      logical Radial
+c
+c     V3: RadMode selects the radial-induction model (if Radial=.T.)
+c         RadMode = 1 : Madsen correction        (Eqs. 6+7, V2)
+c         RadMode = 2 : vortex cylinder model    (Section 3, V3)
+c     read from Machine.in, default 1
+c
+      integer RadMode
+c
+c     V3: per-section storage for the vortex cylinder sweep
+c     (bound circulation, dihedral angle, VC radial induction)
+c
+      real, allocatable :: gamsec(:), kapsec(:), urvc(:)
+c
+c     interpolation weight for binary-search routines (rtbis/funcBS);
+c     set in BEM (was an undefined local in rtbis before)
+c
+      real xpint
+c
       real b, dens
       real rtip, tiplen, ar, rroot 
       real glopitch, glopitcha, glopitche
@@ -35,6 +58,7 @@ c
       REAL, allocatable :: clsp(:)  ,cdsp(:)
       REAL, allocatable :: chs(:),twists(:),clss(:),cdss(:)
       REAL, allocatable :: abem(:),apbem(:)
+      Real, allocatable :: oopdefsp(:),oopdefS(:)
 c
 c     profile data
 c     1st index: max number of profiles
