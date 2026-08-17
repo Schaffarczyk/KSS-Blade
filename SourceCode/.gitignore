@@ -1,0 +1,16 @@
+# Executables and compiled Fortran files
+*.exe
+*.o
+*.mod
+
+# Aerodynamic performance outputs and plots
+*.out
+*.dat
+*.gnu
+
+# Input and airfoil data files
+*.in
+*.aer
+
+# Specific scripts and test files
+compDesCode.cmd
