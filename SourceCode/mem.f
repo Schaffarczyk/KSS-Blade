@@ -17,6 +17,7 @@ c
       real RPM, om, tsr,tsrloc
       integer nwind
       integer DesSchema
+      integer RadialModel
  
       real twmax, chmax
       real pi, eps

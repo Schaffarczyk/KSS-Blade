@@ -36,6 +36,7 @@ c      20 Nov 2025 V4 optimus syria and minor changes
 c	report at overleaf
 c      02 Dec 2025
 c       root chord
+c----Update by Bhima Masare on 11.08.2026 (added RadialModel Flag) 
 c
 c------------------------------------------------------------------------------------------
 	program KSS
@@ -141,6 +142,7 @@ c
          read(intemp,*)inpstring, DesSchema
 
 c
+         read(intemp,*)inpstring, RadialModel
 c----------------  root chord -----------------------------------
 c
          read(intemp,*)inpstring, chroot
@@ -167,6 +169,7 @@ c
       write(*,102)'max chord = ',chmax
       write(*,105)'NSEC      = ',Nsec
       write(*,105)'Des Schema= ',DesSchema
+      write(*,105)'Radial Mod= ',RadialModel
 c 
       write(*,*)  'ImpTwist    ',ImpTwist
       write(*,*)  'ImpThick    ',ImpThick

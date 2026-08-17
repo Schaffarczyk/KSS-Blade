@@ -2,25 +2,17 @@ c
 c-----------------------------------------------------------------------------------------
 c      Mai, June 2019 First coding at ETS, Montreal, 
 c      2021 - 2022   added more details 
-c
-c      2022 binary search if fixed point iteration and Newton does not converge
-c
 c      2023  July: try propeller mode
-c 
 c      June 2026  Bhima: Integrated radial aero, added rational ur/gamma_t, and split BEM loop.
 c      June 2026  Bhima: Added Calc_Induction_Convergence and BEMoutput subroutines.
 c      June 24    APS    gam, etc
-c      June 2026  Bhima: Task 1 (Get_Aero_Coeffs subroutine added).
-c                        Task 3 (gam/ur dependency order fixed).
-c                        Optimized 'iters' out of math subroutine.
-c                        Unified Physics into Solver & Elliptic Integrals.
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c      June 2026  Bhima: Unified Physics into Solver & Elliptic Integrals.
+c                        Fixed 'kappa' pass-back bug for structural bending.
+c                        Added RadialModel toggle (Hansen vs. Vortex Cylinder).
 c----------------------------------------------------------------------
        subroutine BEM(cP,cT,errb)
 c-----------------------------------------------------------------------
-c
       use mem
-c
       real clint(2),cdint(2),dct(0:1)
       real zero(100),aoabs(100)
       real slope, theta, dFx, dFz, kappa
@@ -28,142 +20,102 @@ c
       real cthr, dFzinc, stgp, ctinc, cdl, dz
       real oopdefi, oopdefim1, dum
       real term1, term2, term3, x, z
-
       real thick1, thick2, kg
       real gamma_t, gam, phi, w2, cn, ct, TL
-      real aset, da, a_prev, a1, a2, denom
+      real aset, da, a_prev, a1, a2
       real a, dd, BB, cp_loc, ctloc, ctaer
       integer ibs, j, nprs, na, izero
-
       character*2 iters
       character*5 pstring
       character*20 nout2, nout3, nout4, nout5
-c
       logical bsearch
       bsearch   = .FALSE.
-c
-c------------------------------------------------------------------
-c
-      write(*,*)
-      write(*,*)'************************'
-      write(*,*)'routine BEM ************'
-c
+
       errb = 0.	
-c
-c     critical a value to for cT(a) correction (Glauert/Hansen)
-c
       ac = 0.4
-c
-c     some auxilary values
-c
       om    = rpm*pi/30.
       vtip  = om*rtip
       TSR   = vtip/vwind
       write(*,*)'BEM: vwind TSR=',vwind, tsr
       write(*,*)
-c
-c     open output files
-c
+
       IOOUT  = 11
       nout  = './Bem.out'
       OPEN(UNIT=ioout,FILE=Nout,Form='formatted',status='unknown')
-c
       IO2  = 2
       nout2  = './wt-perf.out'
       OPEN(UNIT=io2,FILE=Nout2,Form='formatted',status='unknown')
-c
       IO3  = 3
       nout3  = './FAST.out'
       OPEN(UNIT=io3,FILE=Nout3,Form='formatted',status='unknown')
-c          
       io4  = 4        
       nout4 = 'BS.out'
       OPEN(UNIT=io4,FILE=nout4,Form='formatted',status='unknown')
-
       io5  = 17 
       nout5 = 'bisecAOA.out'
       OPEN(UNIT=io5,FILE=nout5,Form='formatted',status='unknown')
-c
+
       write(*,101)'r ',' a ','ap ','F','w','chord','twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
      +            'iter','err','th','Prof','It','dFx','dFz','kappa',
-     +            'cTloc','ur_M'
-c
+     +            'cTloc','a_r'
       write(ioout,101)'r ',' a ','ap ','F','w','chord',
      +            'twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
      +            'iter','err','th','Prof','It','dFx','dFz','kappa',
-     +            'cTloc','ur_M'
-c----------------------------------------------------------------------------------
-c     initialize some data
-c
+     +            'cTloc','a_r'
+
       thick1 = 1.
       thick2 = 0.	
-c
       thrust = 0.
       torque = 0.
-c
       aold   = .3
       anew   = .3
-c
       apold  = 0.
       apnew  = eps
-c
-cSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
 c     BEGIN section loop
-c
       dr = (rtip-rroot)/float(nsec)
       do i=1,nsec 
          iter = 1
-c
          bsearch = .true.
          do kk = 1,100
             zero(kk) = 0.
             aoabs(kk) = 0.
          end do
-c
          r = rroot + 0.5*dr + (i-1)*dr
-c
-c        interpolate for chord and twist
-c
+
          if (DesMode)then
             nspl = Nsec
          else
             nspl = ndes
          end if
-c
+
          call SPLINT(rsecsp,chsp   ,chS,   Nspl,r,chord,dummy)
          call SPLINT(rsecsp,twistsp,twistS,Nspl,r,twist,dummy)
-c        Interpolate out-of-plane deflection for local r and r-dr
          call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r,oopdefi,dummy)
          call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r-dr,oopdefim1,dum)
-c
-c        add pitch due to bend twist coupling 
-c
+
          if (twistb)then
             call twistbend(vwind,r,eltwist)
             twist = twist - eltwist
          endif
-c
+
          if(chord.lt.0)chord = 0.001
-c
          rred = r/rtip
          th   = thicksp(rred)
-c
+
          thick2 = th
          if(thick2.gt.thick1)then
              th = thick1
          else
              thick1 = thick2
          endif
-c
          if(th.lt.minthick) th = minthick
 
-c        Dummy call to initialize xp and indpro for the bsearch loop
          call Get_Aero_Coeffs(th, xp, clintth, cdintth)
          tsrloc = om*r/vwind
 
-c        scan each section for multiple solutions
         if (bsearch)then
            dct(0) = 0.
            dct(1) = 0.
@@ -191,7 +143,7 @@ c        scan each section for multiple solutions
             write(io5,211)r,izero,(aoabs(j),j=1,8)
 211         format(f10.2,i6,8f8.3)
         end if
-c
+
         If (izero.gt.1) then
            da = 0.25*abs(zero(2)-zero(1))
            aset = zero(1)
@@ -201,11 +153,8 @@ c
         endif
         bsearch = .false.	
 
-cBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-c        BEGIN BEM loop    
-c
  10      iter  = iter + 1
-c
+
          if(iter.gt.1)then
             aold  = anew
             apold = apnew
@@ -234,81 +183,56 @@ c
 
 c       -----------------------------------------------------------------------
 c       Unified Physics and Numerical Convergence Solver
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call Calc_Induction_Convergence(iiters, r, chord, twist, dr,
      +           aold, apold, a_prev, th, xp, oopdefi, 
      +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth)
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c       -----------------------------------------------------------------------
+     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth, 
+     +           kappa)
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         if(erri.gt.eps.and.iter.lt.maxiter) goto 10
-c
-c       END BEM loop  
-cBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-c
+
         if(erri.gt.errb)errb=erri
-c
+
         dT  =  0.5*dens*B*chord*w2*cn*dr
         dFt =  0.5*dens*B*chord*w2*ct*dr
-c
         dTa = dT/ (B*dr)
         dFta= dFt/(B*dr)
-c
         dQ  =  dFt*r
         dT  = dT/1000.
         dFt = dFt/1000.
         dQ  = dQ/1000.
-c
         clo = clintth
         cdo = cdintth
-c
+
         abem(i) = anew
         apbem(i)= apnew
-c
+
         dFx = dTa * cos(kappa)
         dFz = dTa * sin(kappa)
 
-c       Write section results to output files
         call BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
      +                 clo, cdo, cn, ct, dTa, dFta, gam, iter, 
      +                 erri, th, iters, dFx, dFz, kappa, cthr, ur)
-c---------------------------------------------------------------------------------
-c
-c       to compare with wt-perf
-c
+
         write(io2,105)chord,th*chord,twist
-c
-c       to compare with FAST
-c
         pstring = 'PRINT'
         drnodes = dr
         write(io3,106)r,twist,drnodes,chord,indpro,Pstring
-c
-c----------------------------------------------------------------------------------
-c
-c        sum up for blade's torque and thrust
-c
+
          thrust = thrust + dT
          torque = torque + dQ
-c
       end do
-c
-c     END section loop
-cSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
-c
-c     GLOBAL output
-c
+
       pow = om*torque
-c
       write(*,*)
       write(*,103)'Thrust= ',thrust,' kN'
       write(*,103)'Torque= ',torque,' kNm'
       write(*,103)'Power = ',pow   ,' kW'
-c
       write(ioout,103)'Thrust= ',thrust,' kN'
       write(ioout,103)'Torque= ',torque,' kNm'
       write(ioout,103)'Power = ',pow   ,' kW'
-c
+
       Pref = 0.5*dens*ar*vwind**3
       Tref = 0.5*dens*ar*vwind**2
       cp   = 1000.*pow/Pref
@@ -321,25 +245,22 @@ c
       write(*,103)'cP/cT = ',cp/ct
       write(*,103)'cQ = ',cp/tsr
       write(*,103)'errb  = ',errb
-c
       write(ioout,103)'cP = ',cp
       write(ioout,103)'cT = ',ct
       write(ioout,103)'cQ = ',ct/tsr
       write(ioout,103)'TSR = ',TSR
       write(ioout,103)'pitch = ',glopitch
       write(ioout,103)'errb  = ',errb
-c
       write(ioout,103)'cQ = ',ct/tsr
       write(ioout,103)'TSR = ',TSR
       write(ioout,103)'pitch = ',glopitch
       write(ioout,103)'errb  = ',errb
-c
       Close(UNIT=ioout)
       Close(UNIT=io2)
       Close(UNIT=io3)
       Close(UNIT=io4)
       Close(UNIT=io5)
-c
+
 101   format(14a8,             4a9,       a8,    a9,    a5,  a3, 5a9)
 102   format(a10,f8.3,a12)
 103   format(a20,f12.4,a10)
@@ -349,25 +270,16 @@ c
 500   format(3a12)   
 504   format(2f12.6)
 888   format(a10,2f12.6)
-c
       end
-c
-c------------------------------------------------------------------------
-c       2022 11 29 rtbis from NUMERICAL RECIPES pp 347
-c-------------------------------------------------------------------------
-c
+
 	function rtbis(r,chord,twist,x1,x2,xacc)
-c
 	use mem
-c
 	integer jmax, j
 	real rtbis, x1, x2, xacc, funcBS
 	real dx, f0, fmid, xmid
 	external funcBS
 	parameter (jmax=20)
-c
         nprs = indpro
-c
 	fmid = funcBS(x2,r,chord,twist,nprs,xp)
         f0   = funcBS(x1,r,chord,twist,nprs,xp)
 	if (f0*fmid.gt.0.) write(778,*)'root must be inside rtbis'
@@ -378,7 +290,6 @@ c
 	   rtbis = x2
 	   dx    = x1 - x2
 	end if
-c
 	do j = 1,jmax
 	   dx   = 0.5*dx
            xmid = rtbis + dx
@@ -387,41 +298,28 @@ c
 	   if(abs(dx).lt.xacc.or.fmid.eq.0.)return
    	enddo
 	write(*,*)'too many bisections'
-c
 888     format(a10,i4,f12.6)
         end
-c
-c------------------------------------------------------------------------------------------
+
 	function funcBS(a,r,chord,twist,nprs,xp)
-c------------------------------------------------------------------------------------------
 	use mem
-c
 	nprs = indpro
-c
         call ctsec(a,r,chord,twist,nprs,ctloc,ctaer,aoas,xp)
 	funcBS = ctloc - ctaer
-c
         return
 	end
-c
-c------------------------------------------------------------------------------------------
+
         subroutine ctsec(a,r,chord,twist,nprs,ctloc,ctaer,aoas,xp)
-c------------------------------------------------------------------------------------------
 	use mem
-c
         real clints(2), cdints(2)
         integer nprs
-c
         aa   = a*(1.-a)/tsrloc
         ap   = sqrt(aa+0.25) - 0.5
-c (Line 590 - updated by Bhima on 28.04.2026)
         phi  = atan2(vwind*(1.-a), (r*om*(1.+ap)))
         w2   =     (vwind*(1.-a))**2 + (r*om*(1.+ap))**2
         phid = 180.*phi/pi
         aoas = phid-twist
-c
         FP     = FPR(x,phi)
-c
 	 do k =0,1
             do j=1,300
                aoasp(j) = 0.
@@ -430,7 +328,6 @@ c
                cdsp (j) = 0.
                cdss (j) = 0.
             enddo
-c
             k2 = np(nprs)
 	    do j=1,k2
                aoasp(j) = aoain(nprs,j)
@@ -439,64 +336,50 @@ c
                cdsp (j) = cdin (nprs,j)
                cdss (j) = cds  (nprs,j)
             enddo	 
-c
             call SPLINT
      +      (aoasp,clsp,clss,Np(nprs),aoas,clints(k+1),dummy)
             call SPLINT
      +      (aoasp,cdsp,cdss,Np(nprs),aoas,cdints(k+1),dummy)
 	 enddo
-c
         clint = xp*clints(1)+(1.-xp)*clints(2)
         cdint = xp*cdints(1)+(1.-xp)*cdints(2)
-c
         cn   = clint*cos(phi) + cdint*sin(phi)  
         cta  = clint*sin(phi) - cdint*cos(phi)  
-c
         ctaer  = cn
-c
         cp = 4.*a*(1.-a)**2
-c
         if(a.gt.ac)then
            ctloc = 4.*a*(1.-0.25*(5.-3.*a)*a)*FP
         else
            ctloc = 4.*a*(1.-a)
         endif
-c
 	return
-c
 101     format(7f12.4)
 	end
-c	
-c
+	
+
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c---------------------------------------------------------------------------
       subroutine Calc_Induction_Convergence(iiters, r, chord, twist, dr,
      +           aold, apold, a_prev, th, xp, oopdefi, 
      +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth)
+     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth,
+     +           kappa)
 c---------------------------------------------------------------------------
       use mem
-      
       integer iiters
-c     Keep ONLY variables that are NOT in mem.f or are strictly local
       real r, chord, twist, dr, aold, apold, a_prev, th, xp
       real oopdefi, oopdefim1, aset, da
       real anew, apnew, erri, phi, w2, cn, ct, cthr
-      real ur, gam, gamma_t, TL, clintth, cdintth
+      real ur, gam, gamma_t, TL, clintth, cdintth, kappa
       
-      real dz, kappa, phid, cdl
+      real dz, phid, cdl
       real R_cyl, k2, k, term1, term2, term3
-      real AA, kG, sigH, ahansen, a_guess, a1, a2
+      real AA, kG, sigH, ahansen, a_guess, a1, a2, denom
       
       real Elliptic_K, Elliptic_E
       external Elliptic_K, Elliptic_E
 
-c     Set initial guess for the iteration
       a_guess = aold
 
-c     ==================================================================
-c     CONSOLIDATED PHYSICS (Parts 1, 3, 4, 2)
-c     ==================================================================
 c     --- Part 1: Kinematics ---
       if (r .le. rroot) then
          kappa = 0.0
@@ -517,28 +400,35 @@ c     --- Part 1: Kinematics ---
       cthr = cn*cos(phi) - ct*sin(phi)
       if (cthr.gt.2.0) cthr = 2.0
 
-c     --- Part 3: Tangential Vorticity (Eq. 20) ---
-      gamma_t = 2.0 * vwind * (a_guess - a_prev)
+c     ==================================================================
+c     RADIAL PHYSICS TOGGLE (1 = Hansen, 2 = Vortex Cylinder)
+c     ==================================================================
+      if (RadialModel .eq. 2) then
+c        --- Part 3: Tangential Vorticity (Eq. 20) ---
+         gamma_t = 2.0 * vwind * (a_guess - a_prev)
 
-c     --- Part 4: Radial Induction via Elliptic Integrals (Eq. 10 & 11) ---
-      R_cyl = r + (dr / 2.0)
-      k2    = (4.0 * r * R_cyl) / ((R_cyl + r)**2)
-      if (k2 .ge. 1.0) k2 = 0.999999 
-      k     = sqrt(k2)
-      
-      term1 = -(gamma_t) / (2.0 * pi) * sqrt(R_cyl / r)
-      term2 = ((2.0 - k2) / k) * Elliptic_K(k2)
-      term3 = (2.0 / k) * Elliptic_E(k2)
-      ur    = term1 * (term2 - term3)
+c        --- Part 4: Radial Induction via Elliptic Integrals (Eq. 10 & 11) ---
+         R_cyl = r + (dr / 2.0)
+         k2    = (4.0 * r * R_cyl) / ((R_cyl + r)**2)
+         if (k2 .ge. 1.0) k2 = 0.999999 
+         k     = sqrt(k2)
+         
+         term1 = -(gamma_t) / (2.0 * pi) * sqrt(R_cyl / r)
+         term2 = ((2.0 - k2) / k) * Elliptic_K(k2)
+         term3 = (2.0 / k) * Elliptic_E(k2)
+         ur    = term1 * (term2 - term3)
+      else
+c        --- Classical Hansen Model (No spanwise wake expansion) ---
+         gamma_t = 0.0
+         ur      = 0.0
+      endif
 
 c     --- Part 2: Circulation ---
       w2  = w2 + ur*ur
       cdl = sqrt(clintth**2 + cdintth**2)
       gam = 0.5 * cdl * sqrt(w2) * chord
 
-c     ==================================================================
 c     NUMERICAL ROOT FINDING
-c     ==================================================================
       TL = FPR(r/rtip, phi) * RL(r/rtip, phi)
       AA = B * chord * cn / (8. * pi * TL * r * (sin(phi))**2)
 
@@ -564,16 +454,13 @@ c     ==================================================================
       end select 
 
       erri  = abs(anew - aold) / abs(anew)
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       denom = 8. * TL * pi * r * sin(phi) * cos(phi)
       apnew = (B * chord * ct) / denom
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       apnew = apnew / (1. - apnew)
 
       return
       end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c=======================================================================
       subroutine BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
      +           clo, cdo, cn, ct, dTa, dFta, gam, iter, 
@@ -585,42 +472,33 @@ c=======================================================================
       real ct, dTa, dFta, gam, erri, th, dFx, dFz, kappa, cthr, ur
       integer iter
       character*2 iters
-      real r2d
+      real r2d, a_r
 
-c     Convert kappa to degrees for the output file
       r2d = 180.0 / pi
+c     --- Task 4: Calculate radial induction factor ---
+      a_r = ur / vwind
 
       write(*,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
      +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
      +            iter,erri,th,nameprout,iters,dFx,dFz,r2d*kappa,
-     +            cthr,ur
-c
-c     added by APS 2026 06 25
-c
+     +            cthr,a_r
       write(ioout,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
      +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
      +            iter,erri,th,nameprout,iters,dFx,dFz,r2d*kappa,
-     +            cthr,ur
-c
+     +            cthr,a_r
   100 format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2, 5f9.3)
 
       return
       end
-
 c=======================================================================
 c     Task 1: Subroutine Get_Aero_Coeffs
-c     Handles thickness lookup and cL/cD spline interpolation
 c=======================================================================
       subroutine Get_Aero_Coeffs(th, xp, clintth, cdintth)
-c=======================================================================
       use mem
-
       real th, xp, clintth, cdintth
-
       real clint(2), cdint(2), dummy, dth
       integer k, kk, k2, j
 
-c     find first profile thinner then local thickness
       do k =1,nopr
          if (th.lt.prothick(k))then 
              continue
@@ -633,7 +511,6 @@ c     find first profile thinner then local thickness
   123 if(k.eq.1) indpro=2      
       nameprout = namepr(k)
 
-c     cL/cD interpolation if thickness is not close to a given one
       do k =0,1
          do j=1,300
             aoasp(j) = 0.
@@ -642,7 +519,6 @@ c     cL/cD interpolation if thickness is not close to a given one
             cdsp (j) = 0.
             cdss (j) = 0.
          enddo
-
          kk = indpro-k
          k2 = np(kk)
          do j=1,k2
@@ -652,7 +528,6 @@ c     cL/cD interpolation if thickness is not close to a given one
             cdsp (j) = cdin (kk,j)
             cdss (j) = cds  (kk,j)
          enddo	 
-
          call SPLINT
      +   (aoasp,clsp,clss,Np(kk),aoab,clint(k+1),dummy)
          call SPLINT
@@ -661,13 +536,9 @@ c     cL/cD interpolation if thickness is not close to a given one
 
       dth =  prothick(indpro)-prothick(indpro-1)
       xp  = (prothick(indpro)-th)/dth
-
       clintth = xp*clint(2)+(1.-xp)*clint(1)
-
-c     just for safety - may be not appropriate if very special airfoils are used
       if (clintth.gt. 3.)clintth= 3.
       if (clintth.lt.-2.)clintth=-2.
-
       cdintth = xp*cdint(2)+(1.-xp)*cdint(1)
 
       return

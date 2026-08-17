@@ -97,4 +97,27 @@ c	write(125,*)'splint',y
 c
 	RETURN
 	END
-	
+C------------------------------------------------------------------
+C     Elliptic Integral of the First Kind K(k^2)
+C------------------------------------------------------------------
+      REAL FUNCTION Elliptic_K(m)
+      REAL m, k, K_val
+      ! Simple approximation for K(m)
+      ! Note: m = k^2
+      IF (m .GE. 1.0) m = 0.999999
+      Elliptic_K = (1.570796327 + (0.44325141463 - 0.06260122709*m)*m)/
+     +             (1.0 + (0.24998368310 - 0.09200180037*m)*m)
+      RETURN
+      END
+
+C------------------------------------------------------------------
+C     Elliptic Integral of the Second Kind E(k^2)
+C------------------------------------------------------------------
+      REAL FUNCTION Elliptic_E(m)
+      REAL m, E_val
+      ! Simple approximation for E(m)
+      IF (m .GE. 1.0) m = 0.999999
+      Elliptic_E = (1.0 + (0.44325141463 - 0.06260122709*m)*m)/
+     +             (1.0 + (0.24998368310 - 0.09200180037*m)*m)
+      RETURN
+      END
