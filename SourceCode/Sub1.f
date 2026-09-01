@@ -9,6 +9,8 @@ c      June 24    APS    gam, etc
 c      June 2026  Bhima: Unified Physics into Solver & Elliptic Integrals.
 c                        Fixed 'kappa' pass-back bug for structural bending.
 c                        Added RadialModel toggle (Hansen vs. Vortex Cylinder).
+c      Sept 2026  Bhima: Implemented full Superposition Loop for u_r.
+c                        Renamed local ct to c_tang to fix global cT overwrite.
 c----------------------------------------------------------------------
        subroutine BEM(cP,cT,errb)
 c-----------------------------------------------------------------------
@@ -21,7 +23,7 @@ c-----------------------------------------------------------------------
       real oopdefi, oopdefim1, dum
       real term1, term2, term3, x, z
       real thick1, thick2, kg
-      real gamma_t, gam, phi, w2, cn, ct, TL
+      real gamma_t, gam, phi, w2, cn, c_tang, TL
       real aset, da, a_prev, a1, a2
       real a, dd, BB, cp_loc, ctloc, ctaer
       integer ibs, j, nprs, na, izero
@@ -40,8 +42,16 @@ c-----------------------------------------------------------------------
       write(*,*)
 
       IOOUT  = 11
-      nout  = './Bem.out'
+c     --- Dynamically name the output file based on the selected physics ---
+      if (RadialModel .eq. 1) then
+         nout = './Bem_Hansen.out'
+      else if (RadialModel .eq. 2) then
+         nout = './Bem_VC.out'
+      else
+         nout = './Bem.out'
+      end if
       OPEN(UNIT=ioout,FILE=Nout,Form='formatted',status='unknown')
+      
       IO2  = 2
       nout2  = './wt-perf.out'
       OPEN(UNIT=io2,FILE=Nout2,Form='formatted',status='unknown')
@@ -58,12 +68,12 @@ c-----------------------------------------------------------------------
       write(*,101)'r ',' a ','ap ','F','w','chord','twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
      +            'iter','err','th','Prof','It','dFx','dFz','kappa',
-     +            'cTloc','a_r'
+     +            'cTloc',' a_r ',' u_r '
       write(ioout,101)'r ',' a ','ap ','F','w','chord',
      +            'twist','phi ',
      +            'aoa','cL','cD','L2D','cNo','cTa','dFn','dFt','Ga',
      +            'iter','err','th','Prof','It','dFx','dFz','kappa',
-     +            'cTloc','a_r'
+     +            'cTloc',' a_r ',' u_r '
 
       thick1 = 1.
       thick2 = 0.	
@@ -184,10 +194,10 @@ c     BEGIN section loop
 c       -----------------------------------------------------------------------
 c       Unified Physics and Numerical Convergence Solver
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         call Calc_Induction_Convergence(iiters, r, chord, twist, dr,
+         call Calc_Induction_Convergence(iiters, i, r, chord, twist, dr,
      +           aold, apold, a_prev, th, xp, oopdefi, 
      +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth, 
+     +           cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, cdintth, 
      +           kappa)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         if(erri.gt.eps.and.iter.lt.maxiter) goto 10
@@ -195,7 +205,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         if(erri.gt.errb)errb=erri
 
         dT  =  0.5*dens*B*chord*w2*cn*dr
-        dFt =  0.5*dens*B*chord*w2*ct*dr
+        dFt =  0.5*dens*B*chord*w2*c_tang*dr
         dTa = dT/ (B*dr)
         dFta= dFt/(B*dr)
         dQ  =  dFt*r
@@ -212,7 +222,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         dFz = dTa * sin(kappa)
 
         call BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
-     +                 clo, cdo, cn, ct, dTa, dFta, gam, iter, 
+     +                 clo, cdo, cn, c_tang, dTa, dFta, gam, iter, 
      +                 erri, th, iters, dFx, dFz, kappa, cthr, ur)
 
         write(io2,105)chord,th*chord,twist
@@ -236,32 +246,31 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       Pref = 0.5*dens*ar*vwind**3
       Tref = 0.5*dens*ar*vwind**2
       cp   = 1000.*pow/Pref
-      ct   = 1000.*thrust/Tref
+      cT   = 1000.*thrust/Tref
+      
       write(*,103)'v-wind = ',vwind
       write(*,103)'TSR = ',TSR
       write(*,103)'pitch = ',glopitch
       write(*,103)'cP = ',cp
-      write(*,103)'cT = ',ct
-      write(*,103)'cP/cT = ',cp/ct
+      write(*,103)'cT = ',cT
+      write(*,103)'cP/cT = ',cp/cT
       write(*,103)'cQ = ',cp/tsr
       write(*,103)'errb  = ',errb
+      
       write(ioout,103)'cP = ',cp
-      write(ioout,103)'cT = ',ct
-      write(ioout,103)'cQ = ',ct/tsr
+      write(ioout,103)'cT = ',cT
+      write(ioout,103)'cQ = ',cT/tsr
       write(ioout,103)'TSR = ',TSR
       write(ioout,103)'pitch = ',glopitch
       write(ioout,103)'errb  = ',errb
-      write(ioout,103)'cQ = ',ct/tsr
-      write(ioout,103)'TSR = ',TSR
-      write(ioout,103)'pitch = ',glopitch
-      write(ioout,103)'errb  = ',errb
+
       Close(UNIT=ioout)
       Close(UNIT=io2)
       Close(UNIT=io3)
       Close(UNIT=io4)
       Close(UNIT=io5)
 
-101   format(14a8,             4a9,       a8,    a9,    a5,  a3, 5a9)
+101   format(14a8,             4a9,       a8,    a9,    a5,  a3, 6a9)
 102   format(a10,f8.3,a12)
 103   format(a20,f12.4,a10)
 104   format(2(a15,f12.4))
@@ -358,27 +367,80 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	
 
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine Calc_Induction_Convergence(iiters, r, chord, twist, dr,
-     +           aold, apold, a_prev, th, xp, oopdefi, 
+      subroutine Calc_Induction_Convergence(iiters, isec, r, chord, 
+     +           twist, dr, aold, apold, a_prev, th, xp, oopdefi, 
      +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, ct, cthr, ur, gam, gamma_t, TL, clintth, cdintth,
-     +           kappa)
+     +           cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, 
+     +           cdintth, kappa)
 c---------------------------------------------------------------------------
       use mem
-      integer iiters
+      integer iiters, isec
       real r, chord, twist, dr, aold, apold, a_prev, th, xp
       real oopdefi, oopdefim1, aset, da
-      real anew, apnew, erri, phi, w2, cn, ct, cthr
+      real anew, apnew, erri, phi, w2, cn, c_tang, cthr
       real ur, gam, gamma_t, TL, clintth, cdintth, kappa
       
       real dz, phid, cdl
       real R_cyl, k2, k, term1, term2, term3
+      real a_in, a_out, da_j, gamma_tj
       real AA, kG, sigH, ahansen, a_guess, a1, a2, denom
       
       real Elliptic_K, Elliptic_E
       external Elliptic_K, Elliptic_E
 
       a_guess = aold
+
+c     ==================================================================
+c     RADIAL PHYSICS TOGGLE (1 = Hansen, 2 = Vortex Cylinder)
+c     ==================================================================
+      if (RadialModel .eq. 2) then
+         ur = 0.0
+         ! Superposition Loop over all annulus boundaries j = 0 to nsec
+         do j = 0, nsec
+            R_cyl = rroot + float(j) * dr
+            
+            ! Induction inside boundary R_cyl
+            if (j .eq. 0) then
+               a_in = 0.0
+            else if (j .eq. isec) then
+               a_in = a_guess
+            else
+               a_in = abem(j)
+            endif
+            
+            ! Induction outside boundary R_cyl
+            if (j .eq. nsec) then
+               a_out = 0.0
+            else if (j+1 .eq. isec) then
+               a_out = a_guess
+            else
+               a_out = abem(j+1)
+            endif
+            
+            ! Jump in induction across the boundary
+            da_j = a_out - a_in
+            ! Corrected Tangential vorticity ring strength
+            gamma_tj = -2.0 * vwind * da_j
+            
+            ! Summation (skipping the singularity if evaluating on the boundary)
+            if (abs(R_cyl - r) .gt. 1.e-5 .and. R_cyl .gt. 0.0) then
+               k2 = (4.0 * r * R_cyl) / ((r + R_cyl)**2)
+               if (k2 .ge. 1.0) k2 = 0.999999 
+               k = sqrt(k2)
+               
+               term1 = -(gamma_tj) / (2.0 * pi) * sqrt(R_cyl / r)
+               term2 = ((2.0 - k2) / k) * Elliptic_K(k2)
+               term3 = (2.0 / k) * Elliptic_E(k2)
+               ur = ur + term1 * (term2 - term3)
+            endif
+         enddo
+         ! Diagnostic variable for output matching local section
+         gamma_t = -2.0 * vwind * (a_guess - a_prev)
+      else
+c        --- Classical Hansen Model (No spanwise wake expansion) ---
+         gamma_t = 0.0
+         ur      = 0.0
+      endif
 
 c     --- Part 1: Kinematics ---
       if (r .le. rroot) then
@@ -390,41 +452,21 @@ c     --- Part 1: Kinematics ---
 
       phi  = atan2(vwind*(1.-a_guess)*cos(kappa), (r*om*(1.+apold)))
       if (phi.lt.0.) phi = 0.0001
+      
+      ! Include radial velocity directly in the total relative velocity
       w2   = (vwind*(1.-a_guess)*cos(kappa))**2 + (r*om*(1.+apold))**2
+      w2   = w2 + ur*ur
+      
       phid = 180.*phi/pi
       aoab = phid - twist
 
       call Get_Aero_Coeffs(th, xp, clintth, cdintth)
       cn   = clintth*cos(phi) + cdintth*sin(phi)         
-      ct   = clintth*sin(phi) - cdintth*cos(phi)
-      cthr = cn*cos(phi) - ct*sin(phi)
+      c_tang = clintth*sin(phi) - cdintth*cos(phi)
+      cthr = cn*cos(phi) - c_tang*sin(phi)
       if (cthr.gt.2.0) cthr = 2.0
 
-c     ==================================================================
-c     RADIAL PHYSICS TOGGLE (1 = Hansen, 2 = Vortex Cylinder)
-c     ==================================================================
-      if (RadialModel .eq. 2) then
-c        --- Part 3: Tangential Vorticity (Eq. 20) ---
-         gamma_t = 2.0 * vwind * (a_guess - a_prev)
-
-c        --- Part 4: Radial Induction via Elliptic Integrals (Eq. 10 & 11) ---
-         R_cyl = r + (dr / 2.0)
-         k2    = (4.0 * r * R_cyl) / ((R_cyl + r)**2)
-         if (k2 .ge. 1.0) k2 = 0.999999 
-         k     = sqrt(k2)
-         
-         term1 = -(gamma_t) / (2.0 * pi) * sqrt(R_cyl / r)
-         term2 = ((2.0 - k2) / k) * Elliptic_K(k2)
-         term3 = (2.0 / k) * Elliptic_E(k2)
-         ur    = term1 * (term2 - term3)
-      else
-c        --- Classical Hansen Model (No spanwise wake expansion) ---
-         gamma_t = 0.0
-         ur      = 0.0
-      endif
-
 c     --- Part 2: Circulation ---
-      w2  = w2 + ur*ur
       cdl = sqrt(clintth**2 + cdintth**2)
       gam = 0.5 * cdl * sqrt(w2) * chord
 
@@ -455,21 +497,22 @@ c     NUMERICAL ROOT FINDING
 
       erri  = abs(anew - aold) / abs(anew)
       denom = 8. * TL * pi * r * sin(phi) * cos(phi)
-      apnew = (B * chord * ct) / denom
+      apnew = (B * chord * c_tang) / denom
       apnew = apnew / (1. - apnew)
 
       return
       end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
 c=======================================================================
       subroutine BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
-     +           clo, cdo, cn, ct, dTa, dFta, gam, iter, 
+     +           clo, cdo, cn, c_tang, dTa, dFta, gam, iter, 
      +           erri, th, iters, dFx, dFz, kappa, cthr, ur)
 c=======================================================================
       use mem
 
       real r, anew, apnew, TL, w2, chord, twist, phi, clo, cdo, cn
-      real ct, dTa, dFta, gam, erri, th, dFx, dFz, kappa, cthr, ur
+      real c_tang, dTa, dFta, gam, erri, th, dFx, dFz, kappa, cthr, ur
       integer iter
       character*2 iters
       real r2d, a_r
@@ -479,17 +522,18 @@ c     --- Task 4: Calculate radial induction factor ---
       a_r = ur / vwind
 
       write(*,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
-     +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
+     +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,c_tang,dTa,dFta,gam,
      +            iter,erri,th,nameprout,iters,dFx,dFz,r2d*kappa,
-     +            cthr,a_r
+     +            cthr,a_r,ur
       write(ioout,100)r,anew,apnew,TL,sqrt(w2),chord,twist,
-     +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,ct,dTa,dFta,gam,
+     +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,c_tang,dTa,dFta,gam,
      +            iter,erri,th,nameprout,iters,dFx,dFz,r2d*kappa,
-     +            cthr,a_r
-  100 format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2, 5f9.3)
+     +            cthr,a_r,ur
+  100 format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2, 5f9.3, e12.4)
 
       return
       end
+
 c=======================================================================
 c     Task 1: Subroutine Get_Aero_Coeffs
 c=======================================================================
