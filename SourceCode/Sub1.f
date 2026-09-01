@@ -42,14 +42,7 @@ c-----------------------------------------------------------------------
       write(*,*)
 
       IOOUT  = 11
-c     --- Dynamically name the output file based on the selected physics ---
-      if (RadialModel .eq. 1) then
-         nout = './Bem_Hansen.out'
-      else if (RadialModel .eq. 2) then
-         nout = './Bem_VC.out'
-      else
-         nout = './Bem.out'
-      end if
+      nout  = './Bem.out'
       OPEN(UNIT=ioout,FILE=Nout,Form='formatted',status='unknown')
       
       IO2  = 2
@@ -194,11 +187,11 @@ c     BEGIN section loop
 c       -----------------------------------------------------------------------
 c       Unified Physics and Numerical Convergence Solver
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         call Calc_Induction_Convergence(iiters, i, r, chord, twist, dr,
-     +           aold, apold, a_prev, th, xp, oopdefi, 
+         call Calc_Induction_Convergence(iiters, i, r, chord, twist,
+     +           dr, aold, apold, a_prev, th, xp, oopdefi, 
      +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, cdintth, 
-     +           kappa)
+     +           cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, 
+     +           cdintth, kappa)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         if(erri.gt.eps.and.iter.lt.maxiter) goto 10
 
@@ -422,7 +415,7 @@ c     ==================================================================
             ! Corrected Tangential vorticity ring strength
             gamma_tj = -2.0 * vwind * da_j
             
-            ! Summation (skipping the singularity if evaluating on the boundary)
+            ! Summation (skipping the singularity on the boundary)
             if (abs(R_cyl - r) .gt. 1.e-5 .and. R_cyl .gt. 0.0) then
                k2 = (4.0 * r * R_cyl) / ((r + R_cyl)**2)
                if (k2 .ge. 1.0) k2 = 0.999999 
@@ -529,7 +522,8 @@ c     --- Task 4: Calculate radial induction factor ---
      +            phi*57.3,aoab,clo,cdo,clo/cdo,cn,c_tang,dTa,dFta,gam,
      +            iter,erri,th,nameprout,iters,dFx,dFz,r2d*kappa,
      +            cthr,a_r,ur
-  100 format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2, 5f9.3, e12.4)
+  100 format(7f8.3,2f8.1,5f8.3,3f9.1,i8,x,e8.1,x,f8.6,x,a4,x,a2,
+     +       5f9.3, e12.4)
 
       return
       end
