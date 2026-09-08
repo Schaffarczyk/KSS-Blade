@@ -11,6 +11,8 @@ c                        Fixed 'kappa' pass-back bug for structural bending.
 c                        Added RadialModel toggle (Hansen vs. Vortex Cylinder).
 c      Sept 2026  Bhima: Implemented full Superposition Loop for u_r.
 c                        Renamed local ct to c_tang to fix global cT overwrite.
+c                        Added 3x outer span sweeps for abem consistency.
+c                        Fixed Hansen spanwise geometric projection (sin(kappa)).
 c----------------------------------------------------------------------
        subroutine BEM(cP,cT,errb)
 c-----------------------------------------------------------------------
@@ -26,7 +28,7 @@ c-----------------------------------------------------------------------
       real gamma_t, gam, phi, w2, cn, c_tang, TL
       real aset, da, a_prev, a1, a2
       real a, dd, BB, cp_loc, ctloc, ctaer
-      integer ibs, j, nprs, na, izero
+      integer ibs, j, nprs, na, izero, isweep
       character*2 iters
       character*5 pstring
       character*20 nout2, nout3, nout4, nout5
@@ -68,163 +70,176 @@ c-----------------------------------------------------------------------
      +            'iter','err','th','Prof','It','dFx','dFz','kappa',
      +            'cTloc',' a_r ',' u_r '
 
-      thick1 = 1.
-      thick2 = 0.	
-      thrust = 0.
-      torque = 0.
-      aold   = .3
-      anew   = .3
-      apold  = 0.
-      apnew  = eps
-
-c     BEGIN section loop
       dr = (rtip-rroot)/float(nsec)
-      do i=1,nsec 
-         iter = 1
-         bsearch = .true.
-         do kk = 1,100
-            zero(kk) = 0.
-            aoabs(kk) = 0.
-         end do
-         r = rroot + 0.5*dr + (i-1)*dr
+      
+c     Initialize abem arrays for the first superposition sweep
+      do i=1,300
+         abem(i)  = 0.3
+         apbem(i) = 0.0
+      end do
 
-         if (DesMode)then
-            nspl = Nsec
-         else
-            nspl = ndes
-         end if
+c     OUTER SPAN ITERATIONS for Superposition Consistency
+      do isweep = 1, 3
+         thick1 = 1.
+         thick2 = 0.	
+         thrust = 0.
+         torque = 0.
+         aold   = .3
+         anew   = .3
+         apold  = 0.
+         apnew  = eps
 
-         call SPLINT(rsecsp,chsp   ,chS,   Nspl,r,chord,dummy)
-         call SPLINT(rsecsp,twistsp,twistS,Nspl,r,twist,dummy)
-         call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r,oopdefi,dummy)
-         call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r-dr,oopdefim1,dum)
-
-         if (twistb)then
-            call twistbend(vwind,r,eltwist)
-            twist = twist - eltwist
-         endif
-
-         if(chord.lt.0)chord = 0.001
-         rred = r/rtip
-         th   = thicksp(rred)
-
-         thick2 = th
-         if(thick2.gt.thick1)then
-             th = thick1
-         else
-             thick1 = thick2
-         endif
-         if(th.lt.minthick) th = minthick
-
-         call Get_Aero_Coeffs(th, xp, clintth, cdintth)
-         tsrloc = om*r/vwind
-
-        if (bsearch)then
-           dct(0) = 0.
-           dct(1) = 0.
-           dd     = 1.
-           izero = 0
-           nprs = indpro
-           na = 100
-           da = 1.0/float(na)
-           do ibs=1,na
-              do j = 0,1
-                 a    = (ibs+j-1)*da
-                 dct(j) = funcBS(a,r,chord,twist,nprs,xp)
-              end do
-              a1 = (ibs-1)*da
-              a2 =     ibs*da
-              dd = dct(0)*dct(1)
-              if(dd.lt.0.)then
-               izero = izero + 1
-               zero(izero) = rtbis(r,chord,twist,a1,a2,1.e-8)
-               call ctsec(zero(izero),r,chord,twist,nprs,ctloc,ctaer,
-     +             aoabs(izero),xp)
-              end if
+c        BEGIN section loop
+         do i=1,nsec 
+            iter = 1
+            bsearch = .false.
+            if (isweep .eq. 1) bsearch = .true.
+            
+            do kk = 1,100
+               zero(kk) = 0.
+               aoabs(kk) = 0.
             end do
-            write(io4,211)r,izero,(zero(j),j=1,8)
-            write(io5,211)r,izero,(aoabs(j),j=1,8)
-211         format(f10.2,i6,8f8.3)
-        end if
+            r = rroot + 0.5*dr + (i-1)*dr
 
-        If (izero.gt.1) then
-           da = 0.25*abs(zero(2)-zero(1))
-           aset = zero(1)
-        else
-           da = 0.05
-           aset = zero(1)
-        endif
-        bsearch = .false.	
+            if (DesMode)then
+               nspl = Nsec
+            else
+               nspl = ndes
+            end if
 
- 10      iter  = iter + 1
+            call SPLINT(rsecsp,chsp   ,chS,   Nspl,r,chord,dummy)
+            call SPLINT(rsecsp,twistsp,twistS,Nspl,r,twist,dummy)
+            call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r,oopdefi,dummy)
+            call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r-dr,oopdefim1,dum)
 
-         if(iter.gt.1)then
-            aold  = anew
-            apold = apnew
-         end if   
+            if (twistb)then
+               call twistbend(vwind,r,eltwist)
+               twist = twist - eltwist
+            endif
 
-         if(izero.eq.1)then
+            if(chord.lt.0)chord = 0.001
+            rred = r/rtip
+            th   = thicksp(rred)
+
+            thick2 = th
+            if(thick2.gt.thick1)then
+                th = thick1
+            else
+                thick1 = thick2
+            endif
+            if(th.lt.minthick) th = minthick
+
+            call Get_Aero_Coeffs(th, xp, clintth, cdintth)
+            tsrloc = om*r/vwind
+
+           if (bsearch)then
+              dct(0) = 0.
+              dct(1) = 0.
+              dd     = 1.
+              izero = 0
+              nprs = indpro
+              na = 100
+              da = 1.0/float(na)
+              do ibs=1,na
+                 do j = 0,1
+                    a    = (ibs+j-1)*da
+                    dct(j) = funcBS(a,r,chord,twist,nprs,xp)
+                 end do
+                 a1 = (ibs-1)*da
+                 a2 =     ibs*da
+                 dd = dct(0)*dct(1)
+                 if(dd.lt.0.)then
+                  izero = izero + 1
+                  zero(izero) = rtbis(r,chord,twist,a1,a2,1.e-8)
+                  call ctsec(zero(izero),r,chord,twist,nprs,ctloc,ctaer,
+     +                aoabs(izero),xp)
+                 end if
+               end do
+               write(io4,211)r,izero,(zero(j),j=1,8)
+               write(io5,211)r,izero,(aoabs(j),j=1,8)
+211            format(f10.2,i6,8f8.3)
+           end if
+
+           If (izero.gt.1) then
+              da = 0.25*abs(zero(2)-zero(1))
+              aset = zero(1)
+           else
+              da = 0.05
+              aset = zero(1)
+           endif
+
+ 10         iter  = iter + 1
+
+            if(iter.gt.1)then
+               aold  = anew
+               apold = apnew
+            end if   
+
+            if(izero.eq.1)then
+               iiters = 1
+               iters  = ' F'
+            else
+               iiters = 3
+               iters  = ' B'
+            end if
+            
             iiters = 1
             iters  = ' F'
-         else
-            iiters = 3
-            iters  = ' B'
-         end if
-         
-         iiters = 1
-         iters  = ' F'
-         if(iter.gt.maxiter-10)then
-            iiters=2
-            iters = ' N'
-         endif
+            if(iter.gt.maxiter-10)then
+               iiters=2
+               iters = ' N'
+            endif
 
-         if (i .eq. 1) then
-            a_prev = 0.0
-         else
-            a_prev = abem(i-1)
-         endif
+            if (i .eq. 1) then
+               a_prev = 0.0
+            else
+               a_prev = abem(i-1)
+            endif
 
-c       -----------------------------------------------------------------------
-c       Unified Physics and Numerical Convergence Solver
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         call Calc_Induction_Convergence(iiters, i, r, chord, twist,
-     +           dr, aold, apold, a_prev, th, xp, oopdefi, 
-     +           oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
-     +           cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, 
-     +           cdintth, kappa)
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        if(erri.gt.eps.and.iter.lt.maxiter) goto 10
+c          --------------------------------------------------------------------
+c          Unified Physics and Numerical Convergence Solver
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+            call Calc_Induction_Convergence(iiters, i, r, chord, twist,
+     +              dr, aold, apold, a_prev, th, xp, oopdefi, 
+     +              oopdefim1, aset, da, anew, apnew, erri, phi, w2, 
+     +              cn, c_tang, cthr, ur, gam, gamma_t, TL, clintth, 
+     +              cdintth, kappa)
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+           if(erri.gt.eps.and.iter.lt.maxiter) goto 10
 
-        if(erri.gt.errb)errb=erri
+           if(erri.gt.errb)errb=erri
 
-        dT  =  0.5*dens*B*chord*w2*cn*dr
-        dFt =  0.5*dens*B*chord*w2*c_tang*dr
-        dTa = dT/ (B*dr)
-        dFta= dFt/(B*dr)
-        dQ  =  dFt*r
-        dT  = dT/1000.
-        dFt = dFt/1000.
-        dQ  = dQ/1000.
-        clo = clintth
-        cdo = cdintth
+           dT  =  0.5*dens*B*chord*w2*cn*dr
+           dFt =  0.5*dens*B*chord*w2*c_tang*dr
+           dTa = dT/ (B*dr)
+           dFta= dFt/(B*dr)
+           dQ  =  dFt*r
+           dT  = dT/1000.
+           dFt = dFt/1000.
+           dQ  = dQ/1000.
+           clo = clintth
+           cdo = cdintth
 
-        abem(i) = anew
-        apbem(i)= apnew
+           abem(i) = anew
+           apbem(i)= apnew
 
-        dFx = dTa * cos(kappa)
-        dFz = dTa * sin(kappa)
+           dFx = dTa * cos(kappa)
+           dFz = dTa * sin(kappa)
 
-        call BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
-     +                 clo, cdo, cn, c_tang, dTa, dFta, gam, iter, 
-     +                 erri, th, iters, dFx, dFz, kappa, cthr, ur)
+           if (isweep .eq. 3) then
+              call BEMoutput(r, anew, apnew, TL, w2, chord, twist, phi, 
+     +                    clo, cdo, cn, c_tang, dTa, dFta, gam, iter, 
+     +                    erri, th, iters, dFx, dFz, kappa, cthr, ur)
 
-        write(io2,105)chord,th*chord,twist
-        pstring = 'PRINT'
-        drnodes = dr
-        write(io3,106)r,twist,drnodes,chord,indpro,Pstring
+              write(io2,105)chord,th*chord,twist
+              pstring = 'PRINT'
+              drnodes = dr
+              write(io3,106)r,twist,drnodes,chord,indpro,Pstring
+           end if
 
-         thrust = thrust + dT
-         torque = torque + dQ
+            thrust = thrust + dT
+            torque = torque + dQ
+         end do
       end do
 
       pow = om*torque
@@ -383,6 +398,14 @@ c---------------------------------------------------------------------------
 
       a_guess = aold
 
+c     --- Part 1: Kinematics & Blade Deflection ---
+      if (r .le. rroot) then
+         kappa = 0.0
+      else
+         dz    = oopdefi - oopdefim1
+         kappa = atan(dz / dr)
+      endif 
+
 c     ==================================================================
 c     RADIAL PHYSICS TOGGLE (1 = Hansen, 2 = Vortex Cylinder)
 c     ==================================================================
@@ -412,8 +435,8 @@ c     ==================================================================
             
             ! Jump in induction across the boundary
             da_j = a_out - a_in
-            ! Corrected Tangential vorticity ring strength
-            gamma_tj = -2.0 * vwind * da_j
+            ! Corrected Tangential vorticity ring strength (Sign Flipped)
+            gamma_tj = 2.0 * vwind * da_j
             
             ! Summation (skipping the singularity on the boundary)
             if (abs(R_cyl - r) .gt. 1.e-5 .and. R_cyl .gt. 0.0) then
@@ -428,20 +451,17 @@ c     ==================================================================
             endif
          enddo
          ! Diagnostic variable for output matching local section
-         gamma_t = -2.0 * vwind * (a_guess - a_prev)
+         gamma_t = 2.0 * vwind * (a_guess - a_prev)
+         
+         ! Project cylindrical u_r to spanwise, and add axial induction
+         ur = ur * cos(kappa) - a_guess * vwind * sin(kappa)
+         
       else
-c        --- Classical Hansen Model (No spanwise wake expansion) ---
+c        --- Classical Hansen Model ---
          gamma_t = 0.0
-         ur      = 0.0
+         ! Spanwise component of the induced velocity only
+         ur = -a_guess * vwind * sin(kappa)
       endif
-
-c     --- Part 1: Kinematics ---
-      if (r .le. rroot) then
-         kappa = 0.0
-      else
-         dz    = oopdefi - oopdefim1
-         kappa = atan(dz / dr)
-      endif 
 
       phi  = atan2(vwind*(1.-a_guess)*cos(kappa), (r*om*(1.+apold)))
       if (phi.lt.0.) phi = 0.0001
