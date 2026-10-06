@@ -72,7 +72,7 @@ c
       write(*,*)'From ',nread,' : ',irth,' data read'
 c
       AB1=(dthth(2)   - dthth(1))     /(dthr(2)   -dthr(1))
-      AB2=(dthth(irth)- dthth(irth-1))/(dthr(irth)-dthr(irth-1))
+      AB2=(dthth(irth)- dthth(irth-1))/(dthr(irth)-dthth(irth-1))
       CALL SPLINE(dthr,dthth,irth,AB1,AB2,dthsp)
 c
       write(*,*)'thickness spline GENERATED'
@@ -138,6 +138,8 @@ C
 c
 C     Blade Description if present (BlaDes.in)
 C 
+      ! Skip the first TWO lines (headers/comments)
+      READ(IOIN,*)
       READ(IOIN,*)
 c
 c     read in nd lines from BladeDes

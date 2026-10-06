@@ -393,6 +393,11 @@ c---------------------------------------------------------------------------
       real a_in, a_out, da_j, gamma_tj
       real AA, kG, sigH, ahansen, a_guess, a1, a2, denom
       
+      real z_j, dz_ij, v_norm, v_tang
+      real uz_cyl, uz_total, duz_shift, step_z, Z_ring
+      real k2_ring, k_ring, term_front, term_K, term_E, duz_ring
+      integer n_steps, n
+      
       real Elliptic_K, Elliptic_E
       external Elliptic_K, Elliptic_E
 
@@ -411,10 +416,23 @@ c     RADIAL PHYSICS TOGGLE (1 = Hansen, 2 = Vortex Cylinder)
 c     ==================================================================
       if (RadialModel .eq. 2) then
          ur = 0.0
+         uz_cyl = 0.0
          ! Superposition Loop over all annulus boundaries j = 0 to nsec
          do j = 0, nsec
             R_cyl = rroot + float(j) * dr
             
+            ! Retrieve the axial coordinate of the emitting cylinder (z_j)
+            if (j .eq. 0) then
+               z_j = oopdefS(1)
+            else if (j .gt. 0 .and. j .le. nsec) then
+               z_j = oopdefS(j)
+            else
+               z_j = oopdefS(nsec)
+            endif
+            
+            ! PROFESSOR'S FIX 2: Calculate axial position dependence
+            dz_ij = oopdefi - z_j 
+
             ! Induction inside boundary R_cyl
             if (j .eq. 0) then
                a_in = 0.0
@@ -433,14 +451,12 @@ c     ==================================================================
                a_out = abem(j+1)
             endif
             
-            ! Jump in induction across the boundary
             da_j = a_out - a_in
-            ! Corrected Tangential vorticity ring strength (Sign Flipped)
             gamma_tj = 2.0 * vwind * da_j
             
-            ! Summation (skipping the singularity on the boundary)
             if (abs(R_cyl - r) .gt. 1.e-5 .and. R_cyl .gt. 0.0) then
-               k2 = (4.0 * r * R_cyl) / ((r + R_cyl)**2)
+               ! 1. Calculate Radial Velocity (u_r) with dz_ij offset
+               k2 = (4.0 * r * R_cyl) / ((r + R_cyl)**2 + dz_ij**2)
                if (k2 .ge. 1.0) k2 = 0.999999 
                k = sqrt(k2)
                
@@ -448,27 +464,57 @@ c     ==================================================================
                term2 = ((2.0 - k2) / k) * Elliptic_K(k2)
                term3 = (2.0 / k) * Elliptic_E(k2)
                ur = ur + term1 * (term2 - term3)
+               
+               ! 2. Calculate Axial Velocity Shift (u_z) via Numerical Integration
+               duz_shift = 0.0
+               if (abs(dz_ij) .gt. 0.01) then
+                  n_steps = 10
+                  step_z = dz_ij / float(n_steps)
+                  do n = 1, n_steps
+                     Z_ring = (float(n) - 0.5) * step_z
+                     
+                     k2_ring = (4.0 * r * R_cyl) / 
+     +                         ((r + R_cyl)**2 + Z_ring**2)
+                     if (k2_ring .ge. 1.0) k2_ring = 0.999999
+                     k_ring = sqrt(k2_ring)
+                     
+                     term_front = 1.0 / sqrt((R_cyl + r)**2 + Z_ring**2)
+                     term_K = Elliptic_K(k2_ring)
+                     term_E = Elliptic_E(k2_ring) * 
+     +                        (R_cyl**2 - r**2 - Z_ring**2) / 
+     +                        ((R_cyl - r)**2 + Z_ring**2 + 1.e-8)
+                     
+                     duz_ring = (gamma_tj / (2.0 * pi)) * term_front * 
+     +                          (term_K + term_E) * step_z
+                     duz_shift = duz_shift + duz_ring
+                  enddo
+               endif
+               uz_cyl = uz_cyl - duz_shift
             endif
          enddo
-         ! Diagnostic variable for output matching local section
          gamma_t = 2.0 * vwind * (a_guess - a_prev)
          
-         ! Project cylindrical u_r to spanwise, and add axial induction
-         ur = ur * cos(kappa) - a_guess * vwind * sin(kappa)
+         ! Total Axial Induction = Baseline BEM + 3D VC Shift
+         uz_total = -a_guess * vwind + uz_cyl
          
       else
 c        --- Classical Hansen Model ---
          gamma_t = 0.0
-         ! Spanwise component of the induced velocity only
-         ur = -a_guess * vwind * sin(kappa)
+         ur = 0.0
+         uz_total = -a_guess * vwind
       endif
 
-      phi  = atan2(vwind*(1.-a_guess)*cos(kappa), (r*om*(1.+apold)))
-      if (phi.lt.0.) phi = 0.0001
+c     --- PROFESSOR'S FIX 1: First-Order Flow Projection ---
+      ! Project BOTH induced velocities (axial and radial) onto local normal
+      v_norm = (vwind + uz_total) * cos(kappa) - ur * sin(kappa)
+      v_tang = r * om * (1. + apold)
+
+      ! Calculate the flow angle phi using the corrected normal velocity
+      phi = atan2(v_norm, v_tang)
+      if (phi .lt. 0.) phi = 0.0001
       
-      ! Include radial velocity directly in the total relative velocity
-      w2   = (vwind*(1.-a_guess)*cos(kappa))**2 + (r*om*(1.+apold))**2
-      w2   = w2 + ur*ur
+      ! Total relative velocity
+      w2 = v_norm**2 + v_tang**2
       
       phid = 180.*phi/pi
       aoab = phid - twist
