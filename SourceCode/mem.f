@@ -21,6 +21,28 @@ c     read from Machine.in, default 1
 c
       integer RadMode
 c
+c     V6: NPform selects the formulation of the non-planar rotor
+c         NPform = 0 : as in V5 (planar momentum balance, torque
+c                      integrated over dr, radial force +tan(kappa),
+c                      VC strengths from the blade induction a_B)
+c         NPform = 1 : consistent formulation (default):
+c                      momentum balance with cos(kappa)**2,
+c                      torque integrated over blade length
+c                      ds = dr/cos(kappa), radial force with the
+c                      sign for oop deflection positive DOWNWIND,
+c                      VC strengths from the annulus induction a_inf
+c     read from Machine.in (line "NPform"), default 1
+c
+      integer NPform
+c
+c     cos(kappa)**2 of the current section (1 for NPform = 0)
+c
+      real ck2
+c
+c     V6: annulus induction a_inf (without tip loss) per section
+c
+      real, allocatable :: ainf(:)
+c
 c     V3: per-section storage for the vortex cylinder sweep
 c     (bound circulation, dihedral angle, VC radial induction)
 c

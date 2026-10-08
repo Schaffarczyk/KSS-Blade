@@ -1,0 +1,15 @@
+uniform disc a=0.1: int a^2 r = 0.005000, int ur^2 r = 0.005000 (inside 0.002026, outside 0.002974), ratio = 1.0000
+uniform disc a=0.3: int a^2 r = 0.045000, int ur^2 r = 0.045000 (inside 0.018238, outside 0.026762), ratio = 1.0000
+NREL planar 11.0 m/s Nsec=35 ainf: int a^2 r = 148.692, int ur^2 r = 148.692 (in 73.325, out 75.367), ratio = 1.0000
+NREL planar 11.0 m/s Nsec=35 aB: int a^2 r = 199.117, int ur^2 r = 199.116 (in 72.388, out 126.727), ratio = 1.0000
+NREL planar 11.0 m/s Nsec=70 ainf: int a^2 r = 148.765, int ur^2 r = 148.765 (in 74.486, out 74.278), ratio = 1.0000
+NREL planar 11.0 m/s Nsec=70 aB: int a^2 r = 199.727, int ur^2 r = 199.727 (in 76.235, out 123.491), ratio = 1.0000
+   Madsen 11.0 m/s: int a^2 r = 148.765, int ur^2 r inside disc = 26.951 (ratio 0.1812); with continuation outside 53.025 (ratio 0.3564)
+NREL planar 11.0 m/s Nsec=140 ainf: int a^2 r = 148.759, int ur^2 r = 148.759 (in 74.864, out 73.895), ratio = 1.0000
+NREL planar 11.0 m/s Nsec=140 aB: int a^2 r = 199.422, int ur^2 r = 199.422 (in 77.620, out 121.802), ratio = 1.0000
+NREL planar 7.0 m/s Nsec=70 ainf: int a^2 r = 163.502, int ur^2 r = 163.502 (in 81.665, out 81.837), ratio = 1.0000
+NREL planar 7.0 m/s Nsec=70 aB: int a^2 r = 217.467, int ur^2 r = 217.466 (in 83.206, out 134.261), ratio = 1.0000
+   Madsen 7.0 m/s: int a^2 r = 163.502, int ur^2 r inside disc = 28.100 (ratio 0.1719); with continuation outside 55.493 (ratio 0.3394)
+NREL planar 15.0 m/s Nsec=70 ainf: int a^2 r = 8.730, int ur^2 r = 8.730 (in 4.963, out 3.767), ratio = 1.0000
+NREL planar 15.0 m/s Nsec=70 aB: int a^2 r = 11.619, int ur^2 r = 11.619 (in 5.254, out 6.364), ratio = 1.0000
+   Madsen 15.0 m/s: int a^2 r = 8.730, int ur^2 r inside disc = 3.204 (ratio 0.3670); with continuation outside 5.777 (ratio 0.6618)

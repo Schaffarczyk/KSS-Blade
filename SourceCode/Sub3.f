@@ -7,9 +7,11 @@ c     "A computationally efficient engineering aerodynamic model
 c      for non-planar wind turbine rotors",
 c     Wind Energ. Sci. 7, 75-104 (2022)
 c
-c     The converged axial induction factors abem(i) of the BEM
-c     sweep define nsec+1 semi-infinite trailing vortex cylinders,
-c     Eqs. (20)/(38):
+c     The converged axial induction factors of the BEM sweep
+c     define nsec+1 semi-infinite trailing vortex cylinders,
+c     Eqs. (20)/(38). V6 (NPform = 1): the ANNULUS induction
+c     ainf(i) (no tip loss) is used; V5 used the blade induction
+c     abem(i), which does not vanish at the tip:
 c
 c        gam_t(k) = 2 U0 ( a(k) - a(k-1) )
 c
@@ -51,9 +53,24 @@ c
       real ursec(nsc)
       real rk, zk, rj, zj, gamt, a1, a2, x, ak2, sk, brack
       real ellK, ellE, dum
+      real astr(0:nsc+1)
 c
       do j = 1,nsc
          ursec(j) = 0.
+      end do
+c
+c     V6: cylinder strengths from the annulus induction a_inf
+c     (Li et al. 2022, Eq. 20) for NPform = 1; from the blade
+c     induction a_B (as in V5) for NPform = 0
+c
+      astr(0)     = 0.
+      astr(nsc+1) = 0.
+      do j = 1,nsc
+         if (NPform.eq.1) then
+            astr(j) = ainf(j)
+         else
+            astr(j) = abem(j)
+         endif
       end do
 c
       do j = 1,nsc
@@ -67,16 +84,8 @@ c        superposition of all nsec+1 cylinders
 c
          do k = 1,nsc+1
 c
-            if (k.eq.1) then
-               a1 = 0.
-            else
-               a1 = abem(k-1)
-            endif
-            if (k.eq.nsc+1) then
-               a2 = 0.
-            else
-               a2 = abem(k)
-            endif
+            a1 = astr(k-1)
+            a2 = astr(k)
 c
 c           Eq. (20)/(38)
 c
