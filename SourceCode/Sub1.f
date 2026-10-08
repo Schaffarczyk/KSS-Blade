@@ -21,7 +21,7 @@ c
       real zero(100),aoabs(100)
       real slope, theta, dFx, dFz, kappa
       real ur
-      real cthr, dFzinc, ctinc, dz
+      real cthr, dFzinc, ctinc, dz, sgnr, ctann
       real thrsum, ctav, uarg, gam
       real oopdefi, oopdefim1, dum
 
@@ -194,10 +194,28 @@ c
       if (Radial .and. r.gt.rroot) then
          dz    = oopdefi - oopdefim1
          kappa = atan(dz / dr)
+c
+c        V6: central difference about the section midpoint
+c        (the backward difference above lags by dr/2 for
+c        curved deflection shapes)
+c
+         if (NPform.eq.1) then
+            call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r+0.5*dr,
+     +                  oopdefi,dum)
+            call SPLINT(rsecsp,oopdefsp,oopdefS,Nspl,r-0.5*dr,
+     +                  oopdefim1,dum)
+            dz    = oopdefi - oopdefim1
+            kappa = atan(dz / dr)
+         endif
       else
          kappa = 0.0
       endif
 c ----(End Code - updated by Bhima on 05.05.2026, 26.05.2026)
+c
+c     V6: cos(kappa)**2 for the non-planar momentum balance
+c
+      ck2 = 1.
+      if (NPform.eq.1) ck2 = cos(kappa)**2
 c
 c
 c       start with initial values for a and aprime (1/3 and 0.)
@@ -351,7 +369,11 @@ c
 	bsearch = .false.	
 c
 c
-        AA = B*chord*cn/(8.*pi*TL*r*(sin(phi))**2)
+c       V6: non-planar axial momentum balance
+c           B fn cos(kappa) ds = B fn dr = 4 pi r rho U0**2 a(1-a) F dr
+c           with W sin(phi) = U0 (1-a) cos(kappa)  ->  factor ck2
+c
+        AA = B*chord*cn*ck2/(8.*pi*TL*r*(sin(phi))**2)
 c
 c      (2) 2026 07:
 c      the former in-loop radial correction was removed here:
@@ -475,13 +497,21 @@ c
 c
 c          Eq. (5): extra tangential driving force (per blade)
 c
-           dFzinc = dens*gam*ur*tan(kappa)*dr
+c          V6: oop deflection is positive DOWNWIND; an outward
+c          radial velocity then REDUCES the velocity normal to the
+c          blade axis -> negative sign (Li et al. use kappa > 0
+c          for upwind dihedral)
+c
+           sgnr   = 1.
+           if (NPform.eq.1) sgnr = -1.
+           dFzinc = sgnr*dens*gam*ur*tan(kappa)*dr
 c
 c          add to tangential force of all B blades and
 c          to the tangential force coefficient (diagnostic)
 c
            dFt    = dFt + B*dFzinc
            ctinc  = dFzinc/(0.5*dens*w2*chord*dr)
+           if (NPform.eq.1) ctinc = ctinc*cos(kappa)
            ct     = ct + ctinc
         endif
 c
@@ -490,6 +520,13 @@ c
         dTa = dT/ (B*dr)
         dFta= dFt/(B*dr)
 c
+c       V6: the tangential force per unit BLADE LENGTH acts on
+c           ds = dr/cos(kappa); the radial-velocity term dFzinc
+c           = rho Gam ur sin(kappa) ds is already complete
+c
+        if (NPform.eq.1) then
+           dFt = (dFt - B*dFzinc)/cos(kappa) + B*dFzinc
+        endif
         dQ  =  dFt*r
         dT  = dT/1000.
         dFt = dFt/1000.
@@ -499,6 +536,23 @@ c
         cdo = cdintth
 c
 	abem(i) = anew
+c
+c       V6: annulus induction a_inf from the local thrust
+c       coefficient of the annulus (no tip loss), same a-cT
+c       relation as used for the blade induction:
+c          cT = 4 F a (1-a)                  a <= ac
+c          cT = 4 F (ac**2 + (1-2ac) a)      a >  ac
+c
+        if (anew.le.ac) then
+           ctann = 4.*TL*anew*(1.-anew)
+        else
+           ctann = 4.*TL*(ac*ac + (1.-2.*ac)*anew)
+        endif
+        if (ctann.le.4.*ac*(1.-ac)) then
+           ainf(i) = 0.5*(1.-sqrt(max(0.,1.-ctann)))
+        else
+           ainf(i) = (0.25*ctann - ac*ac)/(1.-2.*ac)
+        endif
         apbem(i)= apnew
 c
         dFx = dTa * cos(kappa)
@@ -553,15 +607,17 @@ c
          io6 = 18
          OPEN(UNIT=io6,FILE='./VC.out',Form='formatted',
      +        status='unknown')
-         write(io6,301)'r','a','kappa','ur_VC','dFzinc'
+         write(io6,301)'r','a','kappa','ur_VC','dFzinc','a_inf'
 c
          dtorvc = 0.
          do i = 1,nsec
             r      = rroot + 0.5*dr + float(i-1)*dr
-            dFzinc = dens*gamsec(i)*urvc(i)*tan(kapsec(i))*dr
+            sgnr   = 1.
+            if (NPform.eq.1) sgnr = -1.
+            dFzinc = sgnr*dens*gamsec(i)*urvc(i)*tan(kapsec(i))*dr
             dtorvc = dtorvc + B*dFzinc*r
             write(io6,302)r,abem(i),180.*kapsec(i)/pi,
-     +                    urvc(i),dFzinc
+     +                    urvc(i),dFzinc,ainf(i)
          end do
          close(unit=io6)
 c
@@ -572,8 +628,8 @@ c
          write(*,103)'VC dTorque= ',dtorvc/1000.,' kNm'
       endif
 c
-301   format(5a12)
-302   format(3f12.4,2f12.5)
+301   format(6a12)
+302   format(3f12.4,3f12.5)
 c
 c     (6) end
 c
@@ -799,7 +855,7 @@ c        EQs from WWL '76 pp 23/39 Eqs (2.4.4), (2.4.6), (2.6.1) & (2.6.2)
 c        use Glauert extension for cT(a) if a > ac
          if (anew.gt.ac)then
             sigH = chord*B/(2.*pi*r)
-            kG   = 4.*TL*sin(phi)*sin(phi)/(sigH*cn)
+            kG   = 4.*TL*sin(phi)*sin(phi)/(sigH*cn*ck2)
             anew = ahansen(Kg,ac)
          end if
 c
@@ -816,7 +872,7 @@ c        (2) NEWTON's method
          dphi  = 0.01*phi
          phi2  = phi + dphi
          AA1   = AA
-         AA2   = B*chord*cn/(8.*TL*pi*r*sin(phi2)*sin(phi2))
+         AA2   = B*chord*cn*ck2/(8.*TL*pi*r*sin(phi2)*sin(phi2))
          AAp   = (AA2-AA1)/dphi
          anew  = aold - AA/AAp
          anew  = anew/(1.+anew)

@@ -79,6 +79,7 @@ c
         allocate(gamsec(1:nsp)  ,stat=status)
         allocate(kapsec(1:nsp)  ,stat=status)
         allocate(urvc(1:nsp)    ,stat=status)
+        allocate(ainf(1:nsp)    ,stat=status)
 c
 	call date_and_time(date,timea,zone,values)
 c
@@ -178,7 +179,17 @@ c
          RadMode = 1
          read(intemp,*,iostat=ios)inpstring, RadMode
          if(ios.ne.0) RadMode = 1
-         if(RadMode.lt.1.or.RadMode.gt.2) RadMode = 1
+         if(RadMode.lt.0.or.RadMode.gt.2) RadMode = 1
+c
+c----------------  non-planar formulation (V6) ------------------------
+c
+c        NPform = 0 : formulation of V5 (as submitted)
+c        NPform = 1 : consistent non-planar formulation (default)
+c
+         NPform = 1
+         read(intemp,*,iostat=ios)inpstring, NPform
+         if(ios.ne.0) NPform = 1
+         if(NPform.lt.0.or.NPform.gt.1) NPform = 1
 c
       Close(UNIT=intemp)
 c

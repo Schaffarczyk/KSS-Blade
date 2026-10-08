@@ -1,0 +1,21 @@
+linear6    N= 70 total kNm: radial VC  -75.74 axial  +75.21 Madsen  -60.32 | outer5%: VC r -17.80 a  +4.20 net -13.60 M  -9.56 | outer10%: r -32.80 a  +9.12 M -18.28 | peak f: VC r  -35.1 @ 60.8, M  -19.1, net  -26.9 @ 60.8 N/m
+linear6    N=140 total kNm: radial VC  -75.94 axial  +75.18 Madsen  -59.63 | outer5%: VC r -15.26 a  +3.42 net -11.83 M  -7.92 | outer10%: r -33.07 a  +9.09 M -18.09 | peak f: VC r  -35.4 @ 60.5, M  -19.0, net  -27.4 @ 61.0 N/m
+linear6    N=280 total kNm: radial VC  -76.05 axial  +75.17 Madsen  -59.30 | outer5%: VC r -15.36 a  +3.42 net -11.94 M  -7.88 | outer10%: r -33.22 a  +9.09 M -18.01 | peak f: VC r  -35.7 @ 60.9, M  -18.9, net  -27.6 @ 60.9 N/m
+bend6      N= 70 total kNm: radial VC -112.00 axial +110.83 Madsen  -83.66 | outer5%: VC r -26.53 a  +6.35 net -20.18 M -14.29 | outer10%: r -48.74 a +13.79 M -27.25 | peak f: VC r  -52.4 @ 60.8, M  -28.5, net  -39.9 @ 60.8 N/m
+bend6      N=140 total kNm: radial VC -112.36 axial +110.76 Madsen  -82.72 | outer5%: VC r -22.75 a  +5.18 net -17.56 M -11.84 | outer10%: r -49.13 a +13.75 M -26.96 | peak f: VC r  -52.8 @ 60.5, M  -28.4, net  -40.7 @ 61.0 N/m
+bend6      N=280 total kNm: radial VC -112.55 axial +110.75 Madsen  -82.28 | outer5%: VC r -22.90 a  +5.17 net -17.72 M -11.78 | outer10%: r -49.35 a +13.74 M -26.85 | peak f: VC r  -53.2 @ 60.9, M  -28.3, net  -41.0 @ 60.9 N/m
+prebend-6  N= 70 total kNm: radial VC +170.81 axial -167.46 Madsen +115.11 | outer5%: VC r +48.73 a -12.10 net +36.63 M +26.49 | outer10%: r +85.87 a -25.67 M +48.40 | peak f: VC r  +95.8 @ 60.8, M  +51.9, net  +72.0 @ 60.8 N/m
+prebend-6  N=140 total kNm: radial VC +171.55 axial -167.31 Madsen +113.86 | outer5%: VC r +42.04 a  -9.90 net +32.14 M +22.09 | outer10%: r +86.51 a -25.57 M +47.85 | peak f: VC r  +96.9 @ 61.0, M  +51.8, net  +74.1 @ 61.0 N/m
+prebend-6  N=280 total kNm: radial VC +171.96 axial -167.27 Madsen +113.28 | outer5%: VC r +42.31 a  -9.88 net +32.44 M +21.98 | outer10%: r +86.90 a -25.55 M +47.63 | peak f: VC r  +97.6 @ 60.9, M  +51.6, net  +74.9 @ 61.1 N/m
+curvedtip  N= 70 total kNm: radial VC -155.37 axial +137.28 Madsen -104.74 | outer5%: VC r -97.74 a +21.31 net -76.44 M -53.98 | outer10%: r -112.62 a +36.80 M -62.69 | peak f: VC r -192.9 @ 60.8, M -109.8, net -150.4 @ 60.8 N/m
+curvedtip  N=140 total kNm: radial VC -143.61 axial +136.60 Madsen  -96.21 | outer5%: VC r -83.28 a +17.65 net -65.63 M -44.50 | outer10%: r -100.93 a +36.43 M -54.66 | peak f: VC r -195.9 @ 60.5, M -108.6, net -151.9 @ 60.5 N/m
+curvedtip  N=280 total kNm: radial VC -144.25 axial +136.57 Madsen  -95.72 | outer5%: VC r -83.92 a +17.60 net -66.31 M -44.30 | outer10%: r -101.61 a +36.43 M -54.43 | peak f: VC r -196.6 @ 60.4, M -108.5, net -153.5 @ 60.9 N/m
+aerodynamic in-plane force per unit length: at r=60.8: 448 N/m ; max 746
+drag share of normal force eps*tan(phi): outer 75%: 0.0004 .. 0.0767 ; eps*cot(phi) (Glauert reduction of wake circulation): 0.038 .. 0.369, mean 0.068
+   strengths from lift+drag, force with Gamma                 : radial  -95.97 axial  +95.30 net  -0.67 kW ; ur_tip 4.329  max|d ur| vs lift+drag
+   strengths from lift+drag, force with Gamma(1-eps cot phi)  : radial  -90.47 axial  +88.63 net  -1.84 kW ; ur_tip 4.329  max|d ur| vs lift+drag
+   strengths from lift only, force with Gamma                 : radial  -91.86 axial  +92.59 net  +0.73 kW ; ur_tip 4.305  max|d ur| vs lift+drag
+   strengths from lift only, force with Gamma(1-eps cot phi)  : radial  -87.01 axial  +86.33 net  -0.68 kW ; ur_tip 4.305  max|d ur| vs lift+drag
+max |ur(lift only) - ur(lift+drag)| for r > 0.00 R: 0.712 m/s at r = 2.5 m
+max |ur(lift only) - ur(lift+drag)| for r > 0.25 R: 0.316 m/s at r = 16.0 m
+max |ur(lift only) - ur(lift+drag)| for r > 0.50 R: 0.070 m/s at r = 32.1 m

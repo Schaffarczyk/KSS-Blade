@@ -1,0 +1,67 @@
+A: {
+"planar": {
+"T": 699.7663,
+"P": 4718.3999,
+"cP": 0.4642
+},
+"np0_defl": {
+"T": 695.1203,
+"P": 4650.4595,
+"cP": 0.4575
+},
+"np0_madsen": {
+"T": 695.1203,
+"P": 4726.2915,
+"cP": 0.4649
+},
+"np0_vc": {
+"T": 695.1203,
+"P": 4728.7114,
+"cP": 0.4652
+},
+"np1_defl": {
+"T": 697.9246,
+"P": 4716.519,
+"cP": 0.464
+},
+"np1_madsen": {
+"T": 697.9246,
+"P": 4640.0781,
+"cP": 0.4565
+},
+"np1_vc": {
+"T": 697.9246,
+"P": 4620.5356,
+"cP": 0.4545
+},
+"vc_radial_kW": -95.96898908330296,
+"vc_axial_kW": 95.3028842994132,
+"vc_axial_overF_kW": 101.53349864256577,
+"vc_net_kW": -0.6661047838897645,
+"aB_radial_kW": -77.82926275903928,
+"aB_axial_kW": 104.2361316130282,
+"P_complete": 4715.8528952161105,
+"madsen_radial_kW": -76.44090000000051,
+"cP_complete": 0.4639221722642139
+}
+B: ur tip VC(ainf) 4.33  VC(aB) 6.54  Madsen 2.33 ; negative ur between 6.1 and 31.2 m, min -1.10
+   ratio VC/Madsen for 0.7<r/R<0.92: 1.15 .. 1.69
+   ratio VC/Madsen for 0.5<r/R<0.9: 0.06 .. 1.65
+   radial VC: total -96.0 kW, outer 10% -41.6 kW, inner 90% -54.4 kW, peak |f| 35.1 N/m at r=60.8
+   axial VC: total +95.3 kW, outer 10% +11.6 kW, inner 90% +83.7 kW, peak |f| 16.0 N/m at r=40.2
+   radial Madsen: total -76.4 kW, outer 10% -23.2 kW, inner 90% -53.3 kW, peak |f| 19.1 N/m at r=59.9
+   net VC: total -0.67 kW, max |f_net| 26.9 N/m at r=60.8; outer10% -30.00 inner90% +29.34
+C: max |a_inf(analytic F) - a_inf(KSS)| at Nsec=70 midpoints: 1.2e-03
+   N=   35  ur_tip a_inf  4.118 (guard  4.118) a_B  5.509 | at r=61.0: a_inf  3.991 a_B  4.500 | gam_tip/2pi a_inf 0.381 a_B 1.235
+   N=   70  ur_tip a_inf  4.322 (guard  4.322) a_B  6.540 | at r=61.0: a_inf  4.245 a_B  4.675 | gam_tip/2pi a_inf 0.187 a_B 0.810
+   N=  140  ur_tip a_inf  4.336 (guard  4.336) a_B  7.052 | at r=61.0: a_inf  4.330 a_B  4.605 | gam_tip/2pi a_inf 0.131 a_B 0.810
+   N=  280  ur_tip a_inf  4.319 (guard  4.301) a_B  7.422 | at r=61.0: a_inf  4.368 a_B  4.617 | gam_tip/2pi a_inf 0.092 a_B 0.810
+   N=  560  ur_tip a_inf  4.324 (guard  4.233) a_B  7.915 | at r=61.0: a_inf  4.387 a_B  4.619 | gam_tip/2pi a_inf 0.064 a_B 0.810
+   N= 1120  ur_tip a_inf  4.333 (guard  4.205) a_B  8.447 | at r=61.0: a_inf  4.396 a_B  4.620 | gam_tip/2pi a_inf 0.045 a_B 0.810
+   N= 2240  ur_tip a_inf  4.342 (guard  4.191) a_B  8.994 | at r=61.0: a_inf  4.401 a_B  4.621 | gam_tip/2pi a_inf 0.032 a_B 0.810
+   N= 4480  ur_tip a_inf  4.348 (guard  4.183) a_B  9.549 | at r=61.0: a_inf  4.403 a_B  4.622 | gam_tip/2pi a_inf 0.023 a_B 0.810
+   KSS N=35: ur_tip 4.119  a_inf(tip) 0.1044  P_defl 4730.8  dPr -95.60  dPa +95.45  net -0.15
+   KSS N=70: ur_tip 4.328  a_inf(tip) 0.0531  P_defl 4716.5  dPr -95.97  dPa +95.30  net -0.67
+   KSS N=140: ur_tip 4.320  a_inf(tip) 0.0279  P_defl 4714.1  dPr -96.23  dPa +95.26  net -0.96
+   KSS N=280: ur_tip 4.274  a_inf(tip) 0.0148  P_defl 4713.3  dPr -96.36  dPa +95.25  net -1.11
+   log fit a_B strengths: slope 0.780 const 3.017
